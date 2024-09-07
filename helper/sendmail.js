@@ -6,8 +6,8 @@ module.exports.sendMail = async (email, subject, html) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: "s3cr3tdota2@gmail.com",
-        pass: "xfic hihr ouaq kgzc",
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
       },
     });
 
