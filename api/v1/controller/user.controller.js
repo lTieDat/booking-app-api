@@ -51,7 +51,7 @@ module.exports.register = async (req, res) => {
                     <h2>${verificationToken}</h2>`;
     await mailHelper.sendMail(email, subject, html);
 
-    handleResponse(
+    return handleResponse(
       res,
       200,
       "Registration successful. Please check your email to verify your account."
@@ -64,11 +64,13 @@ module.exports.register = async (req, res) => {
 // [POST] /api/v1/users/verify
 module.exports.verifyEmail = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { otp, email } = req.body;
 
     // Find user by verification token
     const user = await User.findOne({
-      verificationToken: token,
+      verificationToken: otp,
+      email: email,
+      verified: false,
     });
     if (!user) {
       return handleResponse(res, 400, "Invalid or expired token");
@@ -79,12 +81,13 @@ module.exports.verifyEmail = async (req, res) => {
     //remove verification token and expiry time
     user.verificationToken = undefined;
     user.verificationTokenExpiresAt = undefined;
-
+    const token = user.token;
     await user.save();
     handleResponse(
       res,
       200,
-      "Email verified successfully. You can now log in."
+      "Email verified successfully. You can now log in.",
+      { token }
     );
   } catch (error) {
     handleError(res, error);
@@ -95,7 +98,8 @@ module.exports.verifyEmail = async (req, res) => {
 module.exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-
+    console.log("email", email);
+    console.log("password", password);
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
@@ -106,8 +110,8 @@ module.exports.login = async (req, res) => {
     if (user.password !== md5(password)) {
       return handleResponse(res, 400, "Password incorrect");
     }
-
     const token = user.token;
+    console.log("token", token);
     res.cookie("token", token);
     handleResponse(res, 200, "Login successful", { token });
   } catch (error) {

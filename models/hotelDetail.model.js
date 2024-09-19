@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 
-const imageSchema = new mongoose.Schema({
-  caption: String,
-  imgSource: String,
-});
-
 const addressSchema = new mongoose.Schema({
   StreetAddress: String,
   City: String,
@@ -36,9 +31,7 @@ const hotelSchema = new mongoose.Schema(
     HotelId: String,
     HotelName: String,
     Description: String,
-    Description_fr: String, // Added French description field
     Category: String,
-    images: [imageSchema],
     Tags: [String],
     ParkingIncluded: Boolean,
     LastRenovationDate: Date,
@@ -47,7 +40,7 @@ const hotelSchema = new mongoose.Schema(
     Location: locationSchema,
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt fields automatically
+    timestamps: true,
   }
 );
 
