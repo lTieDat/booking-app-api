@@ -1,4 +1,5 @@
 const User = require("../../../models/user.model");
+const Prefix = require("../../../models/prefixPhone.model");
 const md5 = require("md5");
 const ForgotPassword = require("../../../models/forgotPassword");
 const generateHelper = require("../../../helper/generate");
@@ -29,8 +30,8 @@ module.exports.register = async (req, res) => {
     // Generate a verification token and set expiry time
     const verificationToken = generateHelper.genenrateRandomString(20);
     const token = generateHelper.genenrateRandomString(20);
-    const expiredAt = Date.now() + 5 * 60 * 1000; // Token expires in 5 minutes
-
+    const expiredAt = Date.now() + 5 * 60 * 1000;
+    const userName = "User" + generateHelper.genenrateRandomString(5);
     // Create a new user with verification token and expiry time
     const user = new User({
       fullName,
@@ -40,6 +41,10 @@ module.exports.register = async (req, res) => {
       verificationToken: verificationToken,
       verificationTokenExpiresAt: new Date(expiredAt),
       verified: false,
+      userName: userName,
+      phone: "",
+      address: "",
+      dateOfBirth: "",
     });
 
     await user.save();
@@ -98,24 +103,23 @@ module.exports.verifyEmail = async (req, res) => {
 module.exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log("email", email);
-    console.log("password", password);
+
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      return handleResponse(res, 400, "Email not found");
+      return res.json({ message: "Email not found", status: 400 });
     }
 
     // Check password
     if (user.password !== md5(password)) {
-      return handleResponse(res, 400, "Password incorrect");
+      return res.json({ message: "Incorrect password", status: 400 });
     }
     const token = user.token;
     console.log("token", token);
     res.cookie("token", token);
-    handleResponse(res, 200, "Login successful", { token });
+    res.json({ message: "Login successful", status: 200, token });
   } catch (error) {
-    handleError(res, error);
+    res.json({ message: "Login failed", status: 500 });
   }
 };
 
@@ -205,24 +209,71 @@ module.exports.reset = async (req, res) => {
   }
 };
 
-// [GET] /api/v1/users/detail
-module.exports.detail = async (req, res) => {
-  try {
-    if (req.user) {
-      handleResponse(res, 200, "User details", { data: req.user });
-    } else {
-      handleResponse(res, 400, "User not found");
-    }
-  } catch (error) {
-    handleError(res, error);
-  }
-};
-
 // [GET] /api/v1/users/list
 module.exports.list = async (req, res) => {
   try {
     const users = await User.find({ deleted: false }).select("fullName email");
     handleResponse(res, 200, "User list", { data: users });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+//[GET] /api/v1/users/prefix
+module.exports.prefix = async (req, res) => {
+  try {
+    const prefix = await Prefix.find();
+    handleResponse(res, 200, "Prefix list", { data: prefix });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+//[GET] /api/v1/users/me
+module.exports.me = async (req, res) => {
+  try {
+    const userToken = req.query.tokenID;
+    const user = await User.findOne({
+      token: userToken,
+    }).select("fullName email phone address dateOfBirth userName");
+    handleResponse(res, 200, "User details", { data: user, status: 200 });
+  } catch (error) {
+    handleError(res, error);
+  }
+};
+
+//[POST] /api/v1/users/update
+module.exports.update = async (req, res) => {
+  try {
+    console.log("req.body", req.body);
+    const userToken = req.query.tokenID;
+    console.log("userToken", userToken);
+    const { fullName, phone, address, dateOfBirth, userName, email } = req.body;
+    const user = await User.findOne({ token: userToken });
+    if (!user) {
+      return handleResponse(res, 400, "User not found");
+    }
+    //check attribute is empty or not
+    if (fullName) {
+      user.fullName = fullName;
+    }
+    if (phone) {
+      user.phone = phone;
+    }
+    if (address) {
+      user.address = address;
+    }
+    if (dateOfBirth) {
+      user.dateOfBirth = dateOfBirth;
+    }
+    if (userName) {
+      user.userName = userName;
+    }
+    if (email) {
+      user.email = email;
+    }
+    await user.save();
+    res.json({ message: "Update successful", status: 200 });
   } catch (error) {
     handleError(res, error);
   }

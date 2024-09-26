@@ -135,23 +135,6 @@ router.post("/password/reset", userController.reset);
 
 /**
  * @swagger
- * /users/detail:
- *   get:
- *     summary: Get user details
- *     tags:
- *       - Users
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: User details retrieved successfully
- *       401:
- *         description: Unauthorized
- */
-router.get("/detail", authMiddleware.requireAuth, userController.detail);
-
-/**
- * @swagger
  * /users/list:
  *   get:
  *     summary: Get list of users
@@ -208,4 +191,10 @@ router.get("/list", authMiddleware.requireAuth, userController.list);
  *                   example: Invalid or expired token.
  */
 router.post("/verify", userController.verifyEmail);
+
+router.get("/prefix", userController.prefix);
+
+router.get("/me", userController.me);
+
+router.post("/updateUser", userController.update);
 module.exports = router;

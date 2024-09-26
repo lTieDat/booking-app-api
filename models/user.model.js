@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    userName: { type: String },
     token: String,
     verified: {
       type: Boolean,
@@ -24,6 +25,15 @@ const userSchema = new mongoose.Schema(
     verificationTokenExpiresAt: {
       type: Date,
       expires: 0,
+    },
+    phone: {
+      type: String,
+    },
+    address: {
+      type: String,
+    },
+    dateOfBirth: {
+      type: Date,
     },
     deleted: {
       type: Boolean,

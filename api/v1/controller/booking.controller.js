@@ -63,3 +63,41 @@ module.exports.getBooking = async (req, res) => {
     console.error("Booking get error:", error);
   }
 };
+
+//[POST] /booking/:bookingId/update
+module.exports.updateBooking = async (req, res) => {
+  try {
+    const update = req.body;
+    const bookingId = req.body.bookingId;
+
+    // Find the existing booking
+    let booking = await Booking.findOne({ bookingId });
+    if (!booking) {
+      return res
+        .status(404)
+        .json({ message: "Booking not found.", status: 404 });
+    }
+
+    // Update booking attributes directly
+    booking.customerName = update.fullName;
+    booking.customerEmail = update.email;
+    booking.customerPhone = update.phoneNo;
+    booking.notes = update.notes;
+    booking.arrivalTime = update.arrivalTime;
+    booking.totalAmount = update.finalPrice;
+    booking.airportShuttle = update.airportShuttle;
+    booking.rentalCar = update.rentalCar;
+    booking.taxiShuttle = update.taxiShuttle;
+    booking.specialRequest = update.specialRequest;
+    // console.log(booking);
+
+    // Save the updated booking
+    await booking.save();
+    res
+      .status(200)
+      .json({ message: "Booking updated successfully.", status: 200 });
+  } catch (error) {
+    console.error("Booking update error:", error);
+    res.status(500).json({ message: "Internal server error.", status: 500 });
+  }
+};

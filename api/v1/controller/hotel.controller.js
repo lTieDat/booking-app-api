@@ -63,9 +63,6 @@ module.exports.search = async (req, res) => {
       const roomTagsArray = roomTags.split(",");
       roomFilter.RoomTags = { $in: roomTagsArray };
     }
-
-    console.log(roomFilter);
-
     // const roomInfos = await Room.find(roomFilter);
     const roomInfos = await Room.find({
       HotelId: { $in: hotels.map((hotel) => hotel.HotelId) },
@@ -79,7 +76,6 @@ module.exports.search = async (req, res) => {
           (room) => room.HotelId === hotel.HotelId
         );
         const numberOfRooms = hotelRooms.length;
-        console.log(numberOfRooms, requiredRooms);
         if (numberOfRooms >= requiredRooms) {
           // Get the lowest and highest prices from the hotel's rooms
           const prices = hotelRooms.map((room) => room.BaseRate);
@@ -96,7 +92,6 @@ module.exports.search = async (req, res) => {
               data: null,
             });
           }
-          console.log();
           return {
             ...hotel.toObject(),
             NumberOfRooms: numberOfRooms,
@@ -134,7 +129,6 @@ module.exports.search = async (req, res) => {
 
 // [GET] /api/v1/hotel/:hotelId
 module.exports.getHotelById = async (req, res) => {
-  console.log("getHotelById");
   try {
     const { hotelId } = req.params;
     const { startDate, endDate, adults, children, rooms } = req.query;
@@ -185,7 +179,6 @@ module.exports.getHotelById = async (req, res) => {
 
 //[GET] /api/v1/hotel/:roomId
 module.exports.getHotelRooms = async (req, res) => {
-  console.log("getHotelRooms");
   try {
     const { roomId } = req.params;
     const room = await Room.findOne({ RoomId: roomId });
