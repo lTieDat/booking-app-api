@@ -194,7 +194,168 @@ router.post("/verify", userController.verifyEmail);
 
 router.get("/prefix", userController.prefix);
 
+/**
+ * @swagger
+ * /user/me:
+ *   get:
+ *     summary: Get current user details
+ *     description: Retrieve details of the current user using the provided token.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: query
+ *         name: tokenID
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "user_token_123"
+ *     responses:
+ *       200:
+ *         description: User details retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: "User details"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     fullName:
+ *                       type: string
+ *                       example: "John Doe"
+ *                     email:
+ *                       type: string
+ *                       example: "johndoe@example.com"
+ *                     phone:
+ *                       type: string
+ *                       example: "1234567890"
+ *                     address:
+ *                       type: string
+ *                       example: "123 Main St, Anytown, USA"
+ *                     dateOfBirth:
+ *                       type: string
+ *                       format: date
+ *                       example: "1990-01-01"
+ *                     userName:
+ *                       type: string
+ *                       example: "johndoe"
+ *       404:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 404
+ *                 message:
+ *                   type: string
+ *                   example: "User not found."
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 500
+ *                 message:
+ *                   type: string
+ *                   example: "An error occurred while retrieving user details."
+ */
 router.get("/me", userController.me);
 
+/**
+ * @swagger
+ * /user/update:
+ *   patch:
+ *     summary: Update user details
+ *     description: Update the current user's details using the provided token and request body.
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: query
+ *         name: tokenID
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: "user_token_123"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: "John Doe"
+ *               phone:
+ *                 type: string
+ *                 example: "1234567890"
+ *               address:
+ *                 type: string
+ *                 example: "123 Main St, Anytown, USA"
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *                 example: "1990-01-01"
+ *               userName:
+ *                 type: string
+ *                 example: "johndoe"
+ *               email:
+ *                 type: string
+ *                 example: "johndoe@example.com"
+ *     responses:
+ *       200:
+ *         description: Update successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Update successful"
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *       400:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "User not found"
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: integer
+ *                   example: 500
+ *                 message:
+ *                   type: string
+ *                   example: "An error occurred while updating user details."
+ */
 router.post("/updateUser", userController.update);
+
 module.exports = router;

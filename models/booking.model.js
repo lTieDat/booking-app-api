@@ -15,8 +15,11 @@ const bookingSchema = new mongoose.Schema(
     customerName: { type: String }, // Customer name
     customerEmail: { type: String }, // Customer email
     customerPhone: { type: String }, // Customer phone number
+    customerCountry: { type: String },
     airportShuttle: { type: Boolean },
     rentalCar: { type: Boolean },
+    rentalCarPrice: { type: Number },
+    taxiShuttlePrice: { type: Number },
     taxiShuttle: { type: Boolean },
     specialRequest: { type: String },
     bookingDate: { type: Date, default: Date.now }, // Booking creation date

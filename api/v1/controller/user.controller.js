@@ -4,6 +4,7 @@ const md5 = require("md5");
 const ForgotPassword = require("../../../models/forgotPassword");
 const generateHelper = require("../../../helper/generate");
 const mailHelper = require("../../../helper/sendmail");
+const Account = require("../../../models/account.model");
 
 // Helper function to handle responses
 const handleResponse = (res, code, message, data = null) => {
