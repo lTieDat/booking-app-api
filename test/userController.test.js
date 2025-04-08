@@ -1,8 +1,8 @@
 const request = require('supertest')
 const mongoose = require('mongoose')
-const { app, server } = require('../../../index')
-const User = require('../../../models/user.model')
-const mailHelper = require('../../../helper/sendmail')
+const { app, server } = require('../index')
+const User = require('../models/user.model')
+const mailHelper = require('../helper/sendmail')
 const md5 = require('md5')
 
 jest.mock('../../../helper/sendmail') // Mock email sending
