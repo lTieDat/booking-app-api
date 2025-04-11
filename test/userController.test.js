@@ -5,7 +5,7 @@ const User = require('../models/user.model')
 const mailHelper = require('../helper/sendmail')
 const md5 = require('md5')
 
-jest.mock('../../../helper/sendmail') // Mock email sending
+jest.mock('../helper/sendmail.js') // Mock email sending
 
 afterAll(async () => {
   await mongoose.connection.close()
