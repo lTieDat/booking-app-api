@@ -1,7 +1,7 @@
-const express = require("express");
-const router = express.Router();
-const userController = require("../controller/user.controller.js");
-const authMiddleware = require("../middlewares/auth.middleware.js");
+const express = require('express')
+const router = express.Router()
+const userController = require('../controller/user.controller.js')
+const authMiddleware = require('../middlewares/auth.middleware.js')
 
 /**
  * @swagger
@@ -29,7 +29,7 @@ const authMiddleware = require("../middlewares/auth.middleware.js");
  *       400:
  *         description: Bad request
  */
-router.post("/register", userController.register);
+router.post('/register', userController.register)
 
 /**
  * @swagger
@@ -55,7 +55,7 @@ router.post("/register", userController.register);
  *       401:
  *         description: Unauthorized
  */
-router.post("/login", userController.login);
+router.post('/login', userController.login)
 
 /**
  * @swagger
@@ -79,7 +79,7 @@ router.post("/login", userController.login);
  *       404:
  *         description: User not found
  */
-router.post("/password/forgot", userController.forgotPassword);
+router.post('/password/forgot', userController.forgotPassword)
 
 /**
  * @swagger
@@ -105,7 +105,7 @@ router.post("/password/forgot", userController.forgotPassword);
  *       400:
  *         description: Invalid OTP
  */
-router.post("/password/otp", userController.verifyOTP);
+router.post('/password/otp', userController.verifyEmail)
 
 /**
  * @swagger
@@ -131,7 +131,7 @@ router.post("/password/otp", userController.verifyOTP);
  *       400:
  *         description: Passwords do not match
  */
-router.post("/password/reset", userController.reset);
+router.post('/password/reset', userController.reset)
 
 /**
  * @swagger
@@ -148,7 +148,7 @@ router.post("/password/reset", userController.reset);
  *       401:
  *         description: Unauthorized
  */
-router.get("/list", authMiddleware.requireAuth, userController.list);
+router.get('/list', authMiddleware.requireAuth, userController.list)
 
 /**
  * @swagger
@@ -190,9 +190,9 @@ router.get("/list", authMiddleware.requireAuth, userController.list);
  *                   type: string
  *                   example: Invalid or expired token.
  */
-router.post("/verify", userController.verifyEmail);
+router.post('/verify', userController.verifyEmail)
 
-router.get("/prefix", userController.prefix);
+router.get('/prefix', userController.prefix)
 
 /**
  * @swagger
@@ -272,7 +272,7 @@ router.get("/prefix", userController.prefix);
  *                   type: string
  *                   example: "An error occurred while retrieving user details."
  */
-router.get("/me", userController.me);
+router.get('/me', userController.me)
 
 /**
  * @swagger
@@ -356,6 +356,6 @@ router.get("/me", userController.me);
  *                   type: string
  *                   example: "An error occurred while updating user details."
  */
-router.post("/updateUser", userController.update);
+router.post('/update', userController.update)
 
-module.exports = router;
+module.exports = router
