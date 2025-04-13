@@ -215,7 +215,7 @@ describe('User Controller APIs', () => {
       })
     })
 
-    // email send failure
+    //Testcase 1.8: email send failure
     it('should handle email send failure', async () => {
       // Purpose: Test registration when email sending fails (covers line 80)
       // Input: { fullName: "John Doe", email: "test@example.com", password: "password123" }
@@ -339,7 +339,7 @@ describe('User Controller APIs', () => {
       expect(user).toBeNull()
     })
 
-    // save error
+    //Testcase 3.5 : save error
     it('should handle database save error', async () => {
       // Purpose: Test verification with database save erro
       // Input: { otp: "123456", email: "test@example.com" }
@@ -525,7 +525,7 @@ describe('User Controller APIs', () => {
       })
     })
 
-    // cookie error
+    //Testcase 2.8: cookie error
     it('should handle cookie setting error', async () => {
       // Purpose: Test login with cookie setting failure (covers lines 144–145)
       // Input: { email: "test@example.com", password: "password123" }
@@ -775,7 +775,7 @@ describe('User Controller APIs', () => {
       })
     })
 
-    // save error
+    //Test case 5.6 save error
     it('should handle database save error', async () => {
       // Purpose: Test password reset with database save error
       // Input: { email: "test@example.com", newpassword: "password123" }
