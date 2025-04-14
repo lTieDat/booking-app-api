@@ -413,7 +413,7 @@ router.post('/superAdmin/account', accountController.createAccount)
 
 /**
  * @swagger
- * /api/v1/admin/superAdmin/account/{accountId}:
+ * /admin/superAdmin/account/{accountId}:
  *   put:
  *     summary: Update an account
  *     description: Update the details of an account by its ID.
@@ -499,7 +499,7 @@ router.put('/superAdmin/account/:accountId', accountController.updateAccount)
 
 /**
  * @swagger
- * /api/v1/admin/superAdmin/account/{accountId}:
+ * /admin/superAdmin/account/{accountId}:
  *   delete:
  *     summary: Delete an account
  *     description: Delete an account by its ID.
