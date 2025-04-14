@@ -1,7 +1,7 @@
 const User = require('../../../models/user.model')
 const Prefix = require('../../../models/prefixPhone.model')
 const md5 = require('md5')
-const generateHelper = require('../../../helper/generate')
+const { generateRandomString } = require('../../../helper/generate')
 const mailHelper = require('../../../helper/sendmail')
 const Account = require('../../../models/account.model')
 const Hotel = require('../../../models/hotelDetail.model')
@@ -10,36 +10,32 @@ const Room = require('../../../models/room.model')
 const Post = require('../../../models/post.model')
 const Setting = require('../../../models/setting.model')
 
+// Helper function to exclude sensitive fields
+const excludeSensitiveFields = (data) => {
+  const { password, ...safeData } = data.toObject ? data.toObject() : data
+  return safeData
+}
+
 //[GET] /api/v1/admin/DashboardData/:adminId
 module.exports.getDashboardData = async (req, res) => {
   try {
-    const token = req.params.adminId
-    const manager = await Account.findOne({ token })
-
+    const { adminId } = req.params
+    const manager = await Account.findOne({ token: adminId })
     if (!manager) {
-      return res.status(404).json({ error: 'Manager not found' })
+      return res.status(404).json({ message: 'Manager not found' })
     }
 
     const hotelIds = manager.hotel_id
-    const rooms = await Room.find({
-      HotelId: { $in: hotelIds },
-    })
-
-    const hotels = await Hotel.find({
-      HotelId: { $in: hotelIds },
-    })
-
-    const bookings = await Booking.find({
-      hotelId: { $in: hotelIds },
-    })
+    const [rooms, hotels, bookings] = await Promise.all([
+      Room.find({ HotelId: { $in: hotelIds } }),
+      Hotel.find({ HotelId: { $in: hotelIds } }),
+      Booking.find({ hotelId: { $in: hotelIds } }),
+    ])
 
     const pendingBookings = bookings.filter((booking) => booking.status === 'pending')
-
     const paidBookings = bookings.filter((booking) => booking.status === 'paid')
-
     const confirmedBookings = bookings.filter((booking) => booking.status === 'confirmed')
 
-    // Calculate total revenue for each hotel
     const totalRevenue = hotels.map((hotel) => {
       const hotelBookings = bookings.filter((booking) => booking.hotelId === hotel.HotelId)
       return {
@@ -48,24 +44,20 @@ module.exports.getDashboardData = async (req, res) => {
       }
     })
 
-    //get free rooms, booked rooms, and total rooms for each hotel
     const hotelRoomData = hotels.map((hotel) => {
-      const hotelRooms = rooms.filter((room) => room.HotelId == hotel.HotelId)
-
+      const hotelRooms = rooms.filter((room) => room.HotelId === hotel.HotelId)
       const totalRooms = hotelRooms.reduce((sum, room) => sum + room.MaxQuantity, 0)
       const freeRooms = hotelRooms.reduce((sum, room) => sum + room.NumberAvailable, 0)
-      const bookedRooms = totalRooms - freeRooms
       return {
         hotelId: hotel.HotelName,
         totalRooms,
-        bookedRooms,
+        bookedRooms: totalRooms - freeRooms,
         freeRooms,
       }
     })
 
-    res.json({
+    return res.status(200).json({
       message: 'Dashboard data fetched successfully',
-      status: 200,
       data: {
         totalHotels: hotels.length,
         totalBookings: bookings.length,
@@ -78,7 +70,7 @@ module.exports.getDashboardData = async (req, res) => {
     })
   } catch (error) {
     console.error('Error fetching dashboard data:', error)
-    res.status(500).json({ error: 'An error occurred while fetching dashboard data' })
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
@@ -86,163 +78,221 @@ module.exports.getDashboardData = async (req, res) => {
 module.exports.adminLogin = async (req, res) => {
   try {
     const { email, password } = req.body
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' })
+    }
+
     const account = await Account.findOne({ email })
     if (!account) {
-      return res.json({ message: 'Email not found', status: 400 })
+      return res.status(404).json({ message: 'Email not found' })
     }
-    console.log(md5(password))
-    if (account.password !== md5(password)) {
-      return res.json({ message: 'Incorrect password', status: 400 })
-    }
-    const token = account.token
 
-    res.json({
+    if (account.password !== md5(password)) {
+      return res.status(401).json({ message: 'Incorrect password' })
+    }
+
+    return res.status(200).json({
       message: 'Login successful',
-      status: 200,
-      token,
-      data: account,
+      token: account.token,
+      data: excludeSensitiveFields(account),
     })
   } catch (error) {
-    res.json({ message: 'Login failed', status: 500 })
+    console.error('Error during login:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
 //[GET] /api/v1/admin/me
 module.exports.adminMe = async (req, res) => {
   try {
-    const token = req.query.tokenID
-    const account = await Account.findOne({ token })
-
-    if (!account) {
-      return res.json({ message: 'Account not found', status: 400 })
+    const { tokenID } = req.query
+    if (!tokenID) {
+      return res.status(400).json({ message: 'Token is required' })
     }
-    return res.json({ message: 'Account details', status: 200, data: account })
+
+    const account = await Account.findOne({ token: tokenID })
+    if (!account) {
+      return res.status(404).json({ message: 'Account not found' })
+    }
+
+    return res.status(200).json({
+      message: 'Account details fetched successfully',
+      data: excludeSensitiveFields(account),
+    })
   } catch (error) {
-    res.json({ message: 'Get account failed', status: 500 })
+    console.error('Error fetching account:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/accounts
+//[GET] /admin/superAdmin/accounts
 module.exports.getAccounts = async (req, res) => {
   try {
     const accounts = await Account.find()
-    res.json({ message: 'Accounts fetched successfully', status: 200, data: accounts })
+    const safeAccounts = accounts.map(excludeSensitiveFields)
+
+    return res.status(200).json({
+      message: 'Accounts fetched successfully',
+      data: safeAccounts,
+    })
   } catch (error) {
-    res.json({ message: 'Get accounts failed', status: 500 })
+    console.error('Error fetching accounts:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[POST] /api/v1/admin/superAdmin/account
+//[POST] /admin/superAdmin/account
 module.exports.createAccount = async (req, res) => {
   try {
     const { email, password, role } = req.body
-    const token = generateHelper.generateToken()
+    if (!email || !password || !role) {
+      return res.status(400).json({ message: 'Email, password, and role are required' })
+    }
+
+    const existingAccount = await Account.findOne({ email })
+    if (existingAccount) {
+      return res.status(409).json({ message: 'Email already exists' })
+    }
+
+    const token = generateRandomString(20)
     const newAccount = new Account({
       email,
       password: md5(password),
       role,
       token,
     })
+
     await newAccount.save()
-    res.json({ message: 'Account created successfully', status: 200, data: newAccount })
+    return res.status(201).json({
+      message: 'Account created successfully',
+      data: excludeSensitiveFields(newAccount),
+    })
   } catch (error) {
-    res.json({ message: 'Create account failed', status: 500 })
+    console.error('Error creating account:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[PUT] /api/v1/admin/superAdmin/account/:accountId
+//[PUT] /admin/superAdmin/account/:accountId
 module.exports.updateAccount = async (req, res) => {
   try {
-    const accountId = req.params.accountId
+    const { accountId } = req.params
     const { email, password, role } = req.body
+
     const account = await Account.findById(accountId)
     if (!account) {
-      return res.json({ message: 'Account not found', status: 400 })
+      return res.status(404).json({ message: 'Account not found' })
     }
-    account.email = email
-    account.password = md5(password)
-    account.role = role
+
+    if (email) account.email = email
+    if (password) account.password = md5(password)
+    if (role) account.role = role
+
     await account.save()
-    res.json({ message: 'Account updated successfully', status: 200, data: account })
+    return res.status(200).json({
+      message: 'Account updated successfully',
+      data: excludeSensitiveFields(account),
+    })
   } catch (error) {
-    res.json({ message: 'Update account failed', status: 500 })
+    console.error('Error updating account:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[DELETE] /api/v1/admin/superAdmin/account/:accountId
+//[DELETE] /admin/superAdmin/account/:accountId
 module.exports.deleteAccount = async (req, res) => {
   try {
-    const accountId = req.params.accountId
+    const { accountId } = req.params
     const account = await Account.findById(accountId)
     if (!account) {
-      return res.json({ message: 'Account not found', status: 400 })
+      return res.status(404).json({ message: 'Account not found' })
     }
-    await account.remove()
-    res.json({ message: 'Account deleted successfully', status: 200 })
+
+    await account.deleteOne()
+    return res.status(200).json({ message: 'Account deleted successfully' })
   } catch (error) {
-    res.json({ message: 'Delete account failed', status: 500 })
+    console.error('Error deleting account:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/posts
+//[GET] /admin/superAdmin/posts
 module.exports.getPosts = async (req, res) => {
   try {
     const posts = await Post.find()
-    res.json({ message: 'Posts fetched successfully', status: 200, data: posts })
+    return res.status(200).json({
+      message: 'Posts fetched successfully',
+      data: posts,
+    })
   } catch (error) {
-    res.json({ message: 'Get posts failed', status: 500 })
+    console.error('Error fetching posts:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[POST] /api/v1/admin/superAdmin/post
+//[POST] /admin/superAdmin/post
 module.exports.createPost = async (req, res) => {
   try {
     const { title, content } = req.body
-    const newPost = new Post({
-      title,
-      content,
-    })
+    if (!title || !content) {
+      return res.status(400).json({ message: 'Title and content are required' })
+    }
+
+    const newPost = new Post({ title, content })
     await newPost.save()
-    res.json({ message: 'Post created successfully', status: 200, data: newPost })
+    return res.status(201).json({
+      message: 'Post created successfully',
+      data: newPost,
+    })
   } catch (error) {
-    res.json({ message: 'Create post failed', status: 500 })
+    console.error('Error creating post:', error)
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }
 
-//[PUT] /api/v1/admin/superAdmin/post/:postId
+//[PUT] /admin/superAdmin/post/:postId
 module.exports.updatePost = async (req, res) => {
   try {
-    const postId = req.params.postId
+    const { postId } = req.params
     const { title, content } = req.body
+
     const post = await Post.findById(postId)
     if (!post) {
-      return res.json({ message: 'Post not found', status: 400 })
+      return res.status(404).json({ message: 'Post not found' })
     }
-    post.title = title
-    post.content = content
+
+    if (title) post.title = title
+    if (content) post.content = content
+
     await post.save()
-    res.json({ message: 'Post updated successfully', status: 200, data: post })
+    return res.status(200).json({
+      message: 'Post updated successfully',
+      data: post,
+    })
   } catch (error) {
-    res.json({ message: 'Update post failed', status: 500 })
+    console.error('Error updating post:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[DELETE] /api/v1/admin/superAdmin/post/:postId
+//[DELETE] /admin/superAdmin/post/:postId
 module.exports.deletePost = async (req, res) => {
   try {
-    const postId = req.params.postId
+    const { postId } = req.params
     const post = await Post.findById(postId)
     if (!post) {
-      return res.json({ message: 'Post not found', status: 400 })
+      return res.status(404).json({ message: 'Post not found' })
     }
-    await post.remove()
-    res.json({ message: 'Post deleted successfully', status: 200 })
+
+    await post.deleteOne()
+    return res.status(200).json({ message: 'Post deleted successfully' })
   } catch (error) {
-    res.json({ message: 'Delete post failed', status: 500 })
+    console.error('Error deleting post:', error)
+    return res.status(500).json({ message: 'Internal server error', error })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/displayedPosts
+//[GET] /admin/superAdmin/displayedPosts
 module.exports.getDisplayedPosts = async (req, res) => {
   try {
     const topCities = await Booking.aggregate([
@@ -266,21 +316,19 @@ module.exports.getDisplayedPosts = async (req, res) => {
     ])
 
     const cityNames = topCities.map((city) => city._id)
-
     const displayedPosts = await Post.find({ keyword: { $in: cityNames } })
 
-    res.json({
+    return res.status(200).json({
       message: 'Displayed posts fetched successfully',
-      status: 200,
       data: displayedPosts,
     })
   } catch (error) {
     console.error('Error fetching displayed posts:', error)
-    res.json({ message: 'Get displayed posts failed', status: 500 })
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/displayedPlaces
+//[GET] /admin/superAdmin/displayedPlaces
 module.exports.getDisplayedPlaces = async (req, res) => {
   try {
     const topCountries = await Booking.aggregate([
@@ -304,36 +352,42 @@ module.exports.getDisplayedPlaces = async (req, res) => {
     ])
 
     const countryNames = topCountries.map((country) => country._id)
-
     const displayedPlaces = await Post.find({ keyword: { $in: countryNames } })
 
-    res.json({
+    return res.status(200).json({
       message: 'Displayed places fetched successfully',
-      status: 200,
       data: displayedPlaces,
     })
   } catch (error) {
     console.error('Error fetching displayed places:', error)
-    res.json({ message: 'Get displayed places failed', status: 500 })
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/displayedPostByID
+//[GET] /admin/superAdmin/displayedPostByID
 module.exports.getDisplayedPostByID = async (req, res) => {
   try {
-    const postId = req.query.postId
+    const { postId } = req.query
+    if (!postId) {
+      return res.status(400).json({ message: 'Post ID is required' })
+    }
+
     const post = await Post.findById(postId)
     if (!post) {
-      return res.json({ message: 'Post not found', status: 400 })
+      return res.status(404).json({ message: 'Post not found' })
     }
-    res.json({ message: 'Post fetched successfully', status: 200, data: post })
+
+    return res.status(200).json({
+      message: 'Post fetched successfully',
+      data: post,
+    })
   } catch (error) {
     console.error('Error fetching displayed post:', error)
-    res.json({ message: 'Get displayed post failed', status: 500 })
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }
 
-//[GET] /api/v1/admin/superAdmin/displayedHotels
+//[GET] /admin/superAdmin/displayedHotels
 module.exports.getDisplayedHotels = async (req, res) => {
   try {
     const topHotels = await Booking.aggregate([
@@ -348,16 +402,14 @@ module.exports.getDisplayedHotels = async (req, res) => {
     ])
 
     const hotelIds = topHotels.map((hotel) => hotel._id)
-
     const displayedHotels = await Hotel.find({ HotelId: { $in: hotelIds } })
 
-    res.json({
+    return res.status(200).json({
       message: 'Displayed hotels fetched successfully',
-      status: 200,
       data: displayedHotels,
     })
   } catch (error) {
     console.error('Error fetching displayed hotels:', error)
-    res.json({ message: 'Get displayed hotels failed', status: 500 })
+    return res.status(500).json({ message: 'Internal server error' })
   }
 }
