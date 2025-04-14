@@ -331,3 +331,205 @@ describe('Get All Accounts API', () => {
         Account.find = originalFind
     })
 })
+
+// Checking Create a new account (account.controller.createAccount() function)
+describe('Create Account API', () => {
+    beforeEach(async () => {
+        await Account.deleteMany()
+    })
+
+    // CA6.1 - Successful account creation
+    it('should create account successfully with valid input', async () => {
+        const response = await request(app)
+            .post('/api/v1/admin/superAdmin/account')
+            .send({
+                email: 'admin1@example.com',
+                password: 'StrongPass123',
+                role: 'admin'
+            })
+
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe(200)
+        expect(response.body.message).toBe('Account created successfully')
+        expect(response.body.data).toHaveProperty('email', 'admin1@example.com')
+        expect(response.body.data).toHaveProperty('token')
+    })
+
+    // CA6.2 - Simulate DB error
+    it('should return 500 if internal server error occurs', async () => {
+        const originalSave = Account.prototype.save
+        Account.prototype.save = jest.fn(() => {
+            throw new Error('Simulated DB error')
+        })
+
+        const response = await request(app)
+            .post('/api/v1/admin/superAdmin/account')
+            .send({
+                email: 'failadmin@example.com',
+                password: 'Fail123',
+                role: 'admin'
+            })
+
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe(500)
+        expect(response.body.message).toBe('Create account failed')
+
+        Account.prototype.save = originalSave
+    })
+})
+
+// Checking Add a new review or update an existing review for a hotel using the hotel ID and user ID (hotel.controller.addReview() function)
+describe('POST /api/v1/hotel/:hotelId/review/:userId', () => {
+    let hotelId
+    let userId
+    const bookingId = 'b789'
+
+    beforeEach(async () => {
+        await Review.deleteMany()
+        await Hotel.deleteMany()
+
+        hotelId = new mongoose.Types.ObjectId()
+        userId = new mongoose.Types.ObjectId()
+
+        await Hotel.create({
+            _id: hotelId,
+            name: 'Test Hotel',
+            rating: 0,
+        })
+    })
+
+    // AR7.1 - Hotel not found
+    it('should return 404 if hotel is not found', async () => {
+        const invalidHotelId = new mongoose.Types.ObjectId()
+
+        const res = await request(app)
+            .post(`/api/v1/hotel/${invalidHotelId}/review/${userId}`)
+            .send({
+                reviewText: 'Great place!',
+                rating: 5,
+                bookingId,
+            })
+
+        expect(res.status).toBe(404)
+        expect(res.body.status).toBe(404)
+        expect(res.body.message).toBe('Hotel not found.')
+    })
+
+    // AR7.2 - Update an existing review
+    it('should update an existing review', async () => {
+        await Review.create({
+            hotelId,
+            userId,
+            reviewText: 'Old review',
+            rating: 3,
+            bookingId,
+        })
+
+        const res = await request(app)
+            .post(`/api/v1/hotel/${hotelId}/review/${userId}`)
+            .send({
+                reviewText: 'Great place!',
+                rating: 5,
+                bookingId,
+            })
+
+        expect(res.status).toBe(200)
+        expect(res.body.status).toBe(200)
+        expect(res.body.message).toBe('Review updated successfully.')
+        expect(res.body.review.reviewText).toBe('Great place!')
+        expect(res.body.review.rating).toBe(5)
+    })
+
+    // AR7.3 - Add a new review
+    it('should add a new review', async () => {
+        const res = await request(app)
+            .post(`/api/v1/hotel/${hotelId}/review/${userId}`)
+            .send({
+                reviewText: 'Awesome stay!',
+                rating: 4,
+                bookingId,
+            })
+
+        expect(res.status).toBe(200)
+        expect(res.body.status).toBe(200)
+        expect(res.body.message).toBe('Review added successfully.')
+        expect(res.body.review.reviewText).toBe('Awesome stay!')
+        expect(res.body.review.rating).toBe(4)
+
+        const reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
+        expect(reviewInDb).not.toBeNull()
+        expect(reviewInDb.reviewText).toBe('Awesome stay!')
+    })
+
+    // AR7.4 - Simulate DB failure
+    it('should return 500 if there is a server/database error', async () => {
+        const originalFind = Review.findOne
+        Review.findOne = jest.fn().mockImplementation(() => {
+            throw new Error('Simulated DB error')
+        })
+
+        const res = await request(app)
+            .post(`/api/v1/hotel/${hotelId}/review/${userId}`)
+            .send({
+                reviewText: 'Oops!',
+                rating: 1,
+                bookingId,
+            })
+
+        expect(res.status).toBe(500)
+        expect(res.body.status).toBe(500)
+        expect(res.body.message).toBe('An error occurred while processing the review.')
+
+        Review.findOne = originalFind // restore
+    })
+})
+
+// Checking Fetch all reviews for a specific hotel (hotel.controller.getReviews() function)
+describe('GET /api/v1/hotel/:hotelId/reviews', () => {
+    let hotelId
+
+    beforeEach(async () => {
+        await Review.deleteMany()
+        hotelId = new mongoose.Types.ObjectId()
+        await Review.create([
+            {
+                hotelId,
+                user: 'user1',
+                rating: 4,
+                comment: 'Great place!',
+            },
+            {
+                hotelId,
+                user: 'user2',
+                rating: 5,
+                comment: 'Excellent!',
+            },
+        ])
+    })
+
+    // GR8.1 - Successfully get reviews
+    it('should return 200 and list of reviews for a valid hotelId', async () => {
+        const response = await request(app).get(`/api/v1/hotel/${hotelId}/reviews`)
+
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe(200)
+        expect(response.body.message).toBe('Reviews found.')
+        expect(Array.isArray(response.body.data)).toBe(true)
+    })
+
+    // GR8.2 - Simulated DB/server error
+    it('should return 500 if database error occurs', async () => {
+        const originalFind = Review.find
+        Review.find = jest.fn().mockImplementation(() => {
+            throw new Error('Simulated DB failure')
+        })
+
+        const response = await request(app).get(`/api/v1/hotel/${hotelId}/reviews`)
+
+        expect(response.status).toBe(200)
+        expect(response.body.status).toBe(500)
+        expect(response.body.message).toBe('An error occurred while getting reviews.')
+
+        Review.find = originalFind
+    })
+})
