@@ -1,4 +1,4 @@
-module.exports.genenrateRandomString = (length) => {
+module.exports.generateRandomString = (length) => {
     let result = '';
     let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     for (let i = 0; i < length; i++) {

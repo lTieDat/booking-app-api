@@ -375,7 +375,7 @@ router.post('/:hotelId/review/:userId', hotelController.addReview)
  *                   type: string
  *                   example: "An error occurred while getting reviews."
  */
-router.get('/:hotelId/review', hotelController.getReviews)
+router.get('/:hotelId/reviews', hotelController.getReviews)
 
 /**
  * @swagger
