@@ -205,7 +205,7 @@ describe('Hotel search', () => {
         });
 
         // Kiểm tra response
-        expect(response.body).toEqual({ 
+        expect(response.body).toEqual({
             message: 'Country is required.',
             data: null,
         });
