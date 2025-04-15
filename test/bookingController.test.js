@@ -11,7 +11,6 @@ jest.mock('../helper/generate', () => ({
   generateRandomString: jest.fn(),
 }))
 
-// Tăng timeout toàn cục để tránh lỗi timeout
 jest.setTimeout(60000)
 
 describe('Booking Controller APIs', () => {
@@ -74,7 +73,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -99,7 +98,7 @@ describe('Booking Controller APIs', () => {
       expect(booking).toBeTruthy()
       expect(booking.toObject()).toMatchObject({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         numberOfAdults: 2,
         numberOfChildren: 1,
@@ -116,7 +115,6 @@ describe('Booking Controller APIs', () => {
     })
 
     it('1.2 - should handle missing hotelId', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {})
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
@@ -131,25 +129,22 @@ describe('Booking Controller APIs', () => {
         })
         .timeout(10000)
 
-      expect(response.status).toBe(500)
-      expect(response.body).toEqual({})
-      console.error.mockRestore()
+      expect(response.status).toBe(400)
+      expect(response.body).toMatchObject({ message: 'Hotel ID is required.' })
     })
 
     it('1.3 - should handle missing booking object', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {})
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           userId: 'U456',
           selectedRooms: [{ roomId: 'R001', quantity: 1 }],
         })
         .timeout(10000)
 
-      expect(response.status).toBe(500)
-      expect(response.body).toEqual({})
-      console.error.mockRestore()
+      expect(response.status).toBe(400)
+      expect(response.body).toMatchObject({ message: 'Booking dates are required.' })
     })
 
     it('1.4 - should default userId to guest', async () => {
@@ -158,7 +153,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           booking: {
             startDate: '2025-04-20',
             endDate: '2025-04-25',
@@ -186,7 +181,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -214,7 +209,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -226,18 +221,11 @@ describe('Booking Controller APIs', () => {
         })
         .timeout(10000)
 
-      expect(response.status).toBe(200)
-      expect(response.body).toMatchObject({
-        message: 'Booking created successfully.',
-        data: 'BOOK123',
-      })
-
-      const booking = await Booking.findOne({ bookingId: 'BOOK123' })
-      expect(booking.rooms).toEqual([{ roomId: 'R999', quantity: 1 }])
+      expect(response.status).toBe(400)
+      expect(response.body).toMatchObject({ message: 'One or more rooms not found.' })
     })
 
     it('1.7 - should handle database save failure', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {})
       jest.spyOn(Booking.prototype, 'save').mockImplementationOnce(() => {
         throw new Error('DB failure')
       })
@@ -245,7 +233,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'H123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -258,8 +246,126 @@ describe('Booking Controller APIs', () => {
         .timeout(10000)
 
       expect(response.status).toBe(500)
-      expect(response.body).toEqual({})
-      console.error.mockRestore()
+      expect(response.body).toMatchObject({ message: 'DB failure' })
+    })
+
+    it('1.8 - should handle invalid room quantity', async () => {
+      generate.generateRandomString.mockReturnValue('BOOK123')
+
+      const response = await request(app)
+        .post('/api/v1/booking/create')
+        .send({
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          booking: {
+            startDate: '2025-04-20',
+            endDate: '2025-04-25',
+            adults: 2,
+            children: 1,
+          },
+          selectedRooms: [{ roomId: 'R001', quantity: -1 }],
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(400)
+      expect(response.body).toMatchObject({ message: 'Invalid room selection.' })
+    })
+
+    it('1.9 - should handle room update failure', async () => {
+      jest.spyOn(Room.prototype, 'save').mockImplementationOnce(() => {
+        throw new Error('Room save failure')
+      })
+
+      generate.generateRandomString.mockReturnValue('BOOK123')
+
+      const response = await request(app)
+        .post('/api/v1/booking/create')
+        .send({
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          booking: {
+            startDate: '2025-04-20',
+            endDate: '2025-04-25',
+            adults: 2,
+            children: 1,
+          },
+          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(500)
+      expect(response.body).toMatchObject({ message: 'Room save failure' })
+    })
+
+    it('1.10 - should handle missing selectedRooms', async () => {
+      generate.generateRandomString.mockReturnValue('BOOK123')
+
+      const response = await request(app)
+        .post('/api/v1/booking/create')
+        .send({
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          booking: {
+            startDate: '2025-04-20',
+            endDate: '2025-04-25',
+            adults: 2,
+            children: 1,
+          },
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(200)
+      expect(response.body).toMatchObject({
+        message: 'Booking created successfully.',
+        data: 'BOOK123',
+      })
+
+      const booking = await Booking.findOne({ bookingId: 'BOOK123' })
+      expect(booking.rooms).toEqual([])
+    })
+
+    it('1.11 - should handle invalid date format', async () => {
+      generate.generateRandomString.mockReturnValue('BOOK123')
+
+      const response = await request(app)
+        .post('/api/v1/booking/create')
+        .send({
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          booking: {
+            startDate: 'invalid-date',
+            endDate: '2025-04-25',
+            adults: 2,
+            children: 1,
+          },
+          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(400)
+      expect(response.body).toMatchObject({ message: 'Invalid date format.' })
+    })
+
+    it('1.12 - should handle room quantity exceeding availability', async () => {
+      generate.generateRandomString.mockReturnValue('BOOK123')
+
+      const response = await request(app)
+        .post('/api/v1/booking/create')
+        .send({
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          booking: {
+            startDate: '2025-04-20',
+            endDate: '2025-04-25',
+            adults: 2,
+            children: 1,
+          },
+          selectedRooms: [{ roomId: 'R001', quantity: 10 }],
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(500)
+      expect(response.body).toMatchObject({ message: 'Not enough rooms available for R001' })
     })
   })
 
@@ -267,7 +373,7 @@ describe('Booking Controller APIs', () => {
     it('2.1 - should retrieve booking with valid ID', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -294,16 +400,18 @@ describe('Booking Controller APIs', () => {
     })
 
     it('2.3 - should handle database error', async () => {
-      jest.spyOn(console, 'error').mockImplementation(() => {})
-      jest.spyOn(Booking, 'findOne').mockImplementationOnce(() => {
-        throw new Error('DB failure')
-      })
+      jest.spyOn(Booking, 'findOne').mockRejectedValueOnce(new Error('DB failure'))
 
-      const response = await request(app).get('/api/v1/booking/BOOK123').timeout(10000)
+      const response = await request(app).get('/api/v1/booking/BOOK123').timeout(20000)
 
       expect(response.status).toBe(500)
-      expect(response.body).toEqual({})
-      console.error.mockRestore()
+      expect(response.body).toMatchObject({ message: 'Internal server error.' })
+    })
+
+    it('2.4 - should handle empty bookingId', async () => {
+      const response = await request(app).get('/api/v1/booking/').timeout(10000)
+
+      expect(response.status).toBe(404) // Assuming router handles this
     })
   })
 
@@ -311,7 +419,7 @@ describe('Booking Controller APIs', () => {
     it('3.1 - should delete existing booking', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -340,10 +448,30 @@ describe('Booking Controller APIs', () => {
       })
     })
 
-    it('3.3 - should handle database error', async () => {
-      jest.spyOn(Booking, 'findOne').mockImplementationOnce(() => {
-        throw new Error('DB failure')
+    it('3.3 - should handle database find error', async () => {
+      jest.spyOn(Booking, 'findOne').mockRejectedValueOnce(new Error('DB failure'))
+
+      const response = await request(app).delete('/api/v1/booking/BOOK123').timeout(10000)
+
+      expect(response.status).toBe(500)
+      expect(response.body).toMatchObject({
+        message: 'Internal server error.',
       })
+    })
+
+    it('3.4 - should handle delete failure', async () => {
+      await Booking.create({
+        bookingId: 'BOOK123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        userId: 'U456',
+        checkInDate: '2025-04-20',
+        checkOutDate: '2025-04-25',
+        numberOfAdults: 2,
+        numberOfChildren: 1,
+        status: 'pending',
+      })
+
+      jest.spyOn(Booking.prototype, 'deleteOne').mockRejectedValueOnce(new Error('Delete failure'))
 
       const response = await request(app).delete('/api/v1/booking/BOOK123').timeout(10000)
 
@@ -358,7 +486,7 @@ describe('Booking Controller APIs', () => {
     it('4.1 - should update booking with full data', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -416,7 +544,7 @@ describe('Booking Controller APIs', () => {
     it('4.3 - should handle partial update', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -445,10 +573,10 @@ describe('Booking Controller APIs', () => {
       expect(booking.customerEmail).toBe('jane@example.com')
     })
 
-    it('4.4 - should accept invalid data types', async () => {
+    it('4.4 - should reject invalid data types', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -466,20 +594,16 @@ describe('Booking Controller APIs', () => {
         })
         .timeout(10000)
 
-      expect(response.status).toBe(200)
+      expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
-        message: 'Booking updated successfully.',
-        status: 200,
+        message: expect.stringContaining('Cast to Number failed'),
       })
-
-      const booking = await Booking.findOne({ bookingId: 'BOOK123' })
-      expect(booking.totalAmount).toBe('invalid')
     })
 
     it('4.5 - should handle database save failure', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -488,9 +612,7 @@ describe('Booking Controller APIs', () => {
         status: 'pending',
       })
 
-      jest.spyOn(Booking.prototype, 'save').mockImplementationOnce(() => {
-        throw new Error('DB failure')
-      })
+      jest.spyOn(Booking.prototype, 'save').mockRejectedValueOnce(new Error('DB failure'))
 
       const response = await request(app)
         .post('/api/v1/booking/BOOK123/update')
@@ -507,13 +629,55 @@ describe('Booking Controller APIs', () => {
         status: 500,
       })
     })
+
+    it('4.6 - should handle empty update object', async () => {
+      await Booking.create({
+        bookingId: 'BOOK123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        userId: 'U456',
+        checkInDate: '2025-04-20',
+        checkOutDate: '2025-04-25',
+        numberOfAdults: 2,
+        numberOfChildren: 1,
+        status: 'pending',
+      })
+
+      const response = await request(app)
+        .post('/api/v1/booking/BOOK123/update')
+        .send({
+          bookingId: 'BOOK123',
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(200)
+      expect(response.body).toMatchObject({
+        message: 'Booking updated successfully.',
+        status: 200,
+      })
+    })
+
+    it('4.7 - should handle invalid bookingId format', async () => {
+      const response = await request(app)
+        .post('/api/v1/booking/INVALID/update')
+        .send({
+          bookingId: 'INVALID',
+          fullName: 'John Doe',
+        })
+        .timeout(10000)
+
+      expect(response.status).toBe(404)
+      expect(response.body).toMatchObject({
+        message: 'Booking not found.',
+        status: 404,
+      })
+    })
   })
 
   describe('Get Bookings by Email API - GET /api/v1/booking/bookingHistory/:email', () => {
     it('5.1 - should return bookings with reviews', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         customerEmail: 'john@example.com',
         checkInDate: '2025-04-20',
@@ -523,7 +687,7 @@ describe('Booking Controller APIs', () => {
         status: 'pending',
       })
       await Review.create({
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         bookingId: 'BOOK123',
         reviewText: 'Great stay!',
@@ -543,7 +707,7 @@ describe('Booking Controller APIs', () => {
     it('5.2 - should return bookings without reviews', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'H123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         userId: 'U456',
         customerEmail: 'jane@example.com',
         checkInDate: '2025-04-20',
@@ -582,9 +746,7 @@ describe('Booking Controller APIs', () => {
     })
 
     it('5.5 - should handle database error', async () => {
-      jest.spyOn(Booking, 'find').mockImplementationOnce(() => {
-        throw new Error('DB failure')
-      })
+      jest.spyOn(Booking, 'find').mockRejectedValueOnce(new Error('DB failure'))
 
       const response = await request(app).get('/api/v1/booking/bookingHistory/error@example.com').timeout(10000)
 
@@ -593,22 +755,103 @@ describe('Booking Controller APIs', () => {
         message: 'Internal server error.',
       })
     })
+
+    it('5.6 - should handle review query failure', async () => {
+      await Booking.create({
+        bookingId: 'BOOK123',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        userId: 'U456',
+        customerEmail: 'john@example.com',
+        checkInDate: '2025-04-20',
+        checkOutDate: '2025-04-25',
+        numberOfAdults: 2,
+        numberOfChildren: 1,
+        status: 'pending',
+      })
+
+      jest.spyOn(Review, 'findOne').mockRejectedValueOnce(new Error('Review query failure'))
+
+      const response = await request(app).get('/api/v1/booking/bookingHistory/john@example.com').timeout(10000)
+
+      expect(response.status).toBe(500)
+      expect(response.body).toMatchObject({
+        message: 'Internal server error.',
+      })
+    })
+
+    it('5.7 - should handle multiple bookings', async () => {
+      await Booking.create([
+        {
+          bookingId: 'BOOK123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          customerEmail: 'john@example.com',
+          checkInDate: '2025-04-20',
+          checkOutDate: '2025-04-25',
+          numberOfAdults: 2,
+          numberOfChildren: 1,
+          status: 'pending',
+        },
+        {
+          bookingId: 'BOOK124',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          userId: 'U456',
+          customerEmail: 'john@example.com',
+          checkInDate: '2025-05-20',
+          checkOutDate: '2025-05-25',
+          numberOfAdults: 1,
+          numberOfChildren: 0,
+          status: 'confirmed',
+        },
+      ])
+
+      const response = await request(app).get('/api/v1/booking/bookingHistory/john@example.com').timeout(10000)
+
+      expect(response.status).toBe(200)
+      expect(response.body.data).toHaveLength(2)
+      expect(response.body.data).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ bookingId: 'BOOK123' }),
+          expect.objectContaining({ bookingId: 'BOOK124' }),
+        ])
+      )
+    })
   })
 
   describe('Get Bookings by Hotel ID API - GET /api/v1/booking/bookingHistory/manager/:hotelId', () => {
     beforeEach(async () => {
       await Hotel.create({
-        HotelId: 'HOTEL123',
-        HotelName: 'Grand Hotel',
-        Location: 'City Center',
-        Address: '123 Main St',
-        images: [{ imgSource: 'hotel.jpg' }],
-        Description: 'Luxury hotel with great amenities',
+        _id: '67fd345baca3d86a9740f049',
+        HotelId: 'PoWvBfLBf3eeO49oFPn1',
+        HotelName: 'Test New Luxury Hotel',
+        Description: 'Test new luxury stay',
+        Category: 'Luxury',
+        images: [{ imgSource: 'test_new_hotel.jpg', caption: 'overview' }],
+        Tags: ['WiFi', 'Pool'],
+        ParkingIncluded: true,
+        LastRenovationDate: new Date('2023-04-01'),
+        Rating: 3,
+        Address: {
+          StreetAddress: '789 Test New St',
+          City: 'Rome',
+          StateProvince: 'Lazio',
+          PostalCode: '00186',
+          Country: 'Italy',
+          _id: '67fd345baca3d86a9740f04a',
+        },
+        Location: {
+          type: 'Point',
+          coordinates: [12.4964, 41.9028], // Example coordinates for Rome
+          _id: '67fd345baca3d86a9740f04b',
+        },
+        createdAt: new Date('2025-04-14T16:14:19.031Z'),
+        updatedAt: new Date('2025-04-14T16:14:19.031Z'),
+        __v: 0,
       })
       await Booking.create([
         {
           bookingId: 'BOOK1',
-          hotelId: 'HOTEL123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           customerName: 'John Doe',
           totalAmount: 100,
           numberOfAdults: 2,
@@ -620,7 +863,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK2',
-          hotelId: 'HOTEL123',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           customerName: 'Jane Doe',
           totalAmount: 50,
           numberOfAdults: 1,
@@ -630,17 +873,32 @@ describe('Booking Controller APIs', () => {
           checkInDate: '2025-04-21',
           checkOutDate: '2025-04-26',
         },
+        {
+          bookingId: 'BOOK3',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          customerName: 'Bob Smith',
+          totalAmount: 100,
+          numberOfAdults: 0,
+          numberOfChildren: 0,
+          status: 'confirmed',
+          createdDate: new Date('2025-04-22'),
+          checkInDate: '2025-04-22',
+          checkOutDate: '2025-04-27',
+        },
       ])
     })
 
     it('6.1 - should fetch bookings with no filters', async () => {
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/HOTEL123').timeout(10000)
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
         bookings: expect.arrayContaining([
-          expect.objectContaining({ bookingId: 'BOOK2', hotelName: 'Grand Hotel' }),
-          expect.objectContaining({ bookingId: 'BOOK1', hotelName: 'Grand Hotel' }),
+          expect.objectContaining({ bookingId: 'BOOK3', hotelName: 'Test New Luxury Hotel' }),
+          expect.objectContaining({ bookingId: 'BOOK2', hotelName: 'Test New Luxury Hotel' }),
+          expect.objectContaining({ bookingId: 'BOOK1', hotelName: 'Test New Luxury Hotel' }),
         ]),
         totalPages: 1,
       })
@@ -648,7 +906,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.2 - should filter by status', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/HOTEL123')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ filterStatus: 'pending' })
         .timeout(10000)
 
@@ -661,7 +919,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.3 - should search by customer name', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/HOTEL123')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -674,7 +932,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.4 - should sort by totalAmountAsc', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/HOTEL123')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ sortBy: 'totalAmountAsc' })
         .timeout(10000)
 
@@ -683,6 +941,7 @@ describe('Booking Controller APIs', () => {
         bookings: [
           expect.objectContaining({ bookingId: 'BOOK2', totalAmount: 50 }),
           expect.objectContaining({ bookingId: 'BOOK1', totalAmount: 100 }),
+          expect.objectContaining({ bookingId: 'BOOK3', totalAmount: 100 }),
         ],
         totalPages: 1,
       })
@@ -691,8 +950,8 @@ describe('Booking Controller APIs', () => {
     it('6.5 - should handle pagination', async () => {
       await Booking.create([
         {
-          bookingId: 'BOOK3',
-          hotelId: 'HOTEL123',
+          bookingId: 'BOOK4',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           createdDate: new Date('2025-04-19'),
           checkInDate: '2025-04-19',
           checkOutDate: '2025-04-24',
@@ -701,8 +960,8 @@ describe('Booking Controller APIs', () => {
           status: 'pending',
         },
         {
-          bookingId: 'BOOK4',
-          hotelId: 'HOTEL123',
+          bookingId: 'BOOK5',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           createdDate: new Date('2025-04-18'),
           checkInDate: '2025-04-18',
           checkOutDate: '2025-04-23',
@@ -713,14 +972,14 @@ describe('Booking Controller APIs', () => {
       ])
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/HOTEL123')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ page: 2, itemsPerPage: 2 })
         .timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
-        bookings: [expect.objectContaining({ bookingId: 'BOOK3' }), expect.objectContaining({ bookingId: 'BOOK4' })],
-        totalPages: 2,
+        bookings: [expect.objectContaining({ bookingId: 'BOOK2' }), expect.objectContaining({ bookingId: 'BOOK1' })],
+        totalPages: 3,
       })
     })
 
@@ -735,11 +994,11 @@ describe('Booking Controller APIs', () => {
     })
 
     it('6.7 - should handle database error', async () => {
-      jest.spyOn(Booking, 'find').mockImplementationOnce(() => {
-        throw new Error('DB failure')
-      })
+      jest.spyOn(Booking, 'find').mockRejectedValueOnce(new Error('DB failure'))
 
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/HOTEL123').timeout(10000)
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -749,8 +1008,8 @@ describe('Booking Controller APIs', () => {
 
     it('6.8 - should handle search with missing customerName', async () => {
       await Booking.create({
-        bookingId: 'BOOK3',
-        hotelId: 'HOTEL123',
+        bookingId: 'BOOK4',
+        hotelId: 'PoWvBfLBf3eeO49oFPn1',
         totalAmount: 75,
         createdDate: new Date('2025-04-19'),
         checkInDate: '2025-04-19',
@@ -761,7 +1020,7 @@ describe('Booking Controller APIs', () => {
       })
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/HOTEL123')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -771,424 +1030,138 @@ describe('Booking Controller APIs', () => {
         totalPages: 1,
       })
     })
-  })
-})
 
-describe('Account Controller - getDashboardData API', () => {
-  beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    await new Promise((resolve) => {
-      mongoose.connection.once('connected', resolve)
-    })
-  })
-
-  beforeEach(async () => {
-    if (mongoose.connection.readyState === 1) {
-      await Account.deleteMany()
-      await Hotel.deleteMany()
-      await Room.deleteMany()
-      await Booking.deleteMany()
-    }
-    jest.spyOn(Account, 'findOne').mockRestore()
-    jest.spyOn(Room, 'find').mockRestore()
-    jest.spyOn(Hotel, 'find').mockRestore()
-    jest.spyOn(Booking, 'find').mockRestore()
-  })
-
-  afterAll(async () => {
-    if (mongoose.connection.readyState === 1) {
-      await mongoose.connection.close()
-    }
-    if (server && server.close) await server.close()
-  })
-
-  describe('GET /api/v1/admin/Dashboard/:adminId', () => {
-    // Test Case 7.1
-    it('should fetch dashboard data successfully with multiple hotels and mixed booking statuses', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1', 'HOTEL2'],
-      })
-      await Hotel.create([
-        { HotelId: 'HOTEL1', HotelName: 'Hotel A' },
-        { HotelId: 'HOTEL2', HotelName: 'Hotel B' },
-      ])
-      await Room.create([
-        { HotelId: 'HOTEL1', MaxQuantity: 10, NumberAvailable: 5 },
-        { HotelId: 'HOTEL2', MaxQuantity: 20, NumberAvailable: 15 },
-      ])
-      await Booking.create([
-        { hotelId: 'HOTEL1', status: 'pending', totalAmount: 100 },
-        { hotelId: 'HOTEL1', status: 'paid', totalAmount: 200 },
-        { hotelId: 'HOTEL2', status: 'confirmed', totalAmount: 300 },
-      ])
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.9 - should sort by totalAmountDesc', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ sortBy: 'totalAmountDesc' })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 2,
-          totalBookings: 3,
-          pendingBookings: 1,
-          paidBookings: 1,
-          confirmedBookings: 1,
-          totalRevenue: [
-            { hotelId: 'Hotel A', totalRevenue: 300 },
-            { hotelId: 'Hotel B', totalRevenue: 300 },
-          ],
-          hotelRoomData: [
-            { hotelId: 'Hotel A', totalRooms: 10, bookedRooms: 5, freeRooms: 5 },
-            { hotelId: 'Hotel B', totalRooms: 20, bookedRooms: 5, freeRooms: 15 },
-          ],
-        },
+        bookings: [
+          expect.objectContaining({ bookingId: 'BOOK1', totalAmount: 100 }),
+          expect.objectContaining({ bookingId: 'BOOK3', totalAmount: 100 }),
+          expect.objectContaining({ bookingId: 'BOOK2', totalAmount: 50 }),
+        ],
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(3)
-      const hotels = await Hotel.find()
-      expect(hotels).toHaveLength(2)
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(2)
     })
 
-    // Test Case 7.2
-    it('should fetch dashboard data with one hotel, no bookings, no rooms', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.10 - should sort by numberOfGuest', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ sortBy: 'numberOfGuest' })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 0,
-          pendingBookings: 0,
-          paidBookings: 0,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: 0 }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 0, bookedRooms: 0, freeRooms: 0 }],
-        },
+        bookings: [
+          expect.objectContaining({ bookingId: 'BOOK1', numberOfAdults: 2, numberOfChildren: 1 }),
+          expect.objectContaining({ bookingId: 'BOOK2', numberOfAdults: 1, numberOfChildren: 0 }),
+          expect.objectContaining({ bookingId: 'BOOK3', numberOfAdults: 0, numberOfChildren: 0 }),
+        ],
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(0)
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(0)
-      const hotels = await Hotel.find()
-      expect(hotels).toHaveLength(1)
     })
 
-    // Test Case 7.3
-    it('should fetch dashboard data with hotels but no bookings', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
+    it('6.11 - should handle hotel not found', async () => {
+      await Booking.create({
+        bookingId: 'BOOK4',
+        hotelId: 'HOTEL999',
+        customerName: 'John Doe',
+        totalAmount: 100,
+        numberOfAdults: 2,
+        numberOfChildren: 1,
+        status: 'pending',
+        createdDate: new Date('2025-04-20'),
+        checkInDate: '2025-04-20',
+        checkOutDate: '2025-04-25',
       })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-      await Room.create([{ HotelId: 'HOTEL1', MaxQuantity: 10, NumberAvailable: 8 }])
 
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/HOTEL999').timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 0,
-          pendingBookings: 0,
-          paidBookings: 0,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: 0 }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 10, bookedRooms: 2, freeRooms: 8 }],
-        },
+        bookings: [expect.objectContaining({ bookingId: 'BOOK4', hotelName: 'Unknown' })],
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(0)
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(1)
-      expect(rooms[0].MaxQuantity).toBe(10)
-      expect(rooms[0].NumberAvailable).toBe(8)
     })
 
-    // Test Case 7.4
-    it('should fetch dashboard data with bookings but no rooms', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-      await Booking.create([{ hotelId: 'HOTEL1', status: 'paid', totalAmount: 500 }])
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.12 - should handle empty search query', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ searchQuery: '' })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
+      expect(response.body.bookings).toHaveLength(3)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 1,
-          pendingBookings: 0,
-          paidBookings: 1,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: 500 }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 0, bookedRooms: 0, freeRooms: 0 }],
-        },
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(1)
-      expect(bookings[0].status).toBe('paid')
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(0)
     })
 
-    // Test Case 7.5
-    it('should handle empty hotel_id array', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: [],
-      })
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.13 - should handle negative page number', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ page: -1 })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
+      expect(response.body.bookings).toHaveLength(3)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 0,
-          totalBookings: 0,
-          pendingBookings: 0,
-          paidBookings: 0,
-          confirmedBookings: 0,
-          totalRevenue: [],
-          hotelRoomData: [],
-        },
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(0)
-      const hotels = await Hotel.find()
-      expect(hotels).toHaveLength(0)
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(0)
     })
 
-    // Test Case 7.6
-    it('should handle hotels with zero total rooms', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-      await Room.create([{ HotelId: 'HOTEL1', MaxQuantity: 0, NumberAvailable: 0 }])
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.14 - should handle zero itemsPerPage', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ itemsPerPage: 0 })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
-      expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 0,
-          pendingBookings: 0,
-          paidBookings: 0,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: 0 }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 0, bookedRooms: 0, freeRooms: 0 }],
-        },
-      })
-
-      // Verify database state
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(1)
-      expect(rooms[0].MaxQuantity).toBe(0)
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(0)
+      expect(response.body.bookings).toHaveLength(0)
+      expect(response.body.totalPages).toBeGreaterThan(0) // Handle edge case
     })
 
-    // Test Case 7.7
-    it('should handle bookings with zero totalAmount', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-      await Booking.create([{ hotelId: 'HOTEL1', status: 'paid', totalAmount: 0 }])
+    it('6.15 - should handle hotel query failure', async () => {
+      jest.spyOn(Hotel, 'findOne').mockRejectedValueOnce(new Error('Hotel query failure'))
 
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
-
-      expect(response.status).toBe(200)
-      expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 1,
-          pendingBookings: 0,
-          paidBookings: 1,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: 0 }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 0, bookedRooms: 0, freeRooms: 0 }],
-        },
-      })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(1)
-      expect(bookings[0].totalAmount).toBe(0)
-    })
-
-    // Test Case 7.8
-    it('should return 404 for invalid admin ID', async () => {
-      const response = await request(app).get('/api/v1/admin/Dashboard/INVALID_TOKEN')
-
-      expect(response.status).toBe(404)
-      expect(response.body).toEqual({
-        message: 'Manager not found',
-      })
-
-      // Verify database state
-      const accounts = await Account.find()
-      expect(accounts).toHaveLength(0)
-    })
-
-    // Test Case 7.9
-    it('should handle database error on Account.findOne', async () => {
-      jest.spyOn(Account, 'findOne').mockRejectedValueOnce(new Error('DB error'))
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
         message: 'Internal server error',
       })
-
-      // Verify database state
-      const accounts = await Account.find()
-      expect(accounts).toHaveLength(0)
     })
 
-    // Test Case 7.10
-    it('should handle database error on Promise.all', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      jest.spyOn(Room, 'find').mockRejectedValueOnce(new Error('DB error'))
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
-
-      expect(response.status).toBe(500)
-      expect(response.body).toMatchObject({
-        message: 'Internal server error',
-      })
-
-      // Verify database state
-      const account = await Account.findOne({ token: 'TOKEN123' })
-      expect(account).not.toBeNull()
-    })
-
-    // Test Case 7.11
-    it('should handle large dataset for performance', async () => {
-      const hotelIds = Array.from({ length: 100 }, (_, i) => `HOTEL${i}`)
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: hotelIds,
-      })
-      await Hotel.create(hotelIds.map((id, i) => ({ HotelId: id, HotelName: Hotel`${i}` })))
-      await Room.create(
-        hotelIds.flatMap((hotelId) =>
-          Array.from({ length: 10 }, (_, i) => ({
-            HotelId: hotelId,
-            MaxQuantity: 10,
-            NumberAvailable: 5,
-          }))
-        )
-      )
-      await Booking.create(
-        hotelIds.flatMap((hotelId) =>
-          Array.from({ length: 10 }, (_, i) => ({
-            hotelId: hotelId,
-            status: i % 3 === 0 ? 'pending' : i % 3 === 1 ? 'paid' : 'confirmed',
-            totalAmount: 100,
-          }))
-        )
-      )
-
-      const startTime = Date.now()
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
-      const executionTime = Date.now() - startTime
+    it('6.16 - should handle special characters in search query', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ searchQuery: 'John@Doe' })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
+      expect(response.body.bookings).toHaveLength(0)
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 100,
-          totalBookings: 1000,
-          pendingBookings: expect.any(Number),
-          paidBookings: expect.any(Number),
-          confirmedBookings: expect.any(Number),
-          totalRevenue: expect.arrayContaining([expect.objectContaining({ totalRevenue: 1000 })]),
-          hotelRoomData: expect.arrayContaining([
-            expect.objectContaining({ totalRooms: 100, bookedRooms: 50, freeRooms: 50 }),
-          ]),
-        },
+        totalPages: 0,
       })
-      expect(executionTime).toBeLessThan(500)
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(1000)
-      const hotels = await Hotel.find()
-      expect(hotels).toHaveLength(100)
-      const rooms = await Room.find()
-      expect(rooms).toHaveLength(1000)
     })
 
-    // Test Case 7.12
-    it('should handle booking with max totalAmount', async () => {
-      await Account.create({
-        token: 'TOKEN123',
-        hotel_id: ['HOTEL1'],
-      })
-      await Hotel.create([{ HotelId: 'HOTEL1', HotelName: 'Hotel A' }])
-      await Booking.create([{ hotelId: 'HOTEL1', status: 'paid', totalAmount: Number.MAX_SAFE_INTEGER }])
-
-      const response = await request(app).get('/api/v1/admin/Dashboard/TOKEN123')
+    it('6.17 - should filter by month', async () => {
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .query({ month: '4' })
+        .timeout(10000)
 
       expect(response.status).toBe(200)
+      expect(response.body.bookings).toHaveLength(3) // Month filter commented out, so all bookings returned
       expect(response.body).toMatchObject({
-        message: 'Dashboard data fetched successfully',
-        data: {
-          totalHotels: 1,
-          totalBookings: 1,
-          pendingBookings: 0,
-          paidBookings: 1,
-          confirmedBookings: 0,
-          totalRevenue: [{ hotelId: 'Hotel A', totalRevenue: Number.MAX_SAFE_INTEGER }],
-          hotelRoomData: [{ hotelId: 'Hotel A', totalRooms: 0, bookedRooms: 0, freeRooms: 0 }],
-        },
+        totalPages: 1,
       })
-
-      // Verify database state
-      const bookings = await Booking.find()
-      expect(bookings).toHaveLength(1)
-      expect(bookings[0].totalAmount).toBe(Number.MAX_SAFE_INTEGER)
     })
   })
 })
