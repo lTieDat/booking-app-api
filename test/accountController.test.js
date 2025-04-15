@@ -14,7 +14,7 @@ afterAll(async () => {
 // Checking Admin Login (account.controller.adminLogin() function)
 describe('Admin Login API', () => {
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
 
         await Account.create({
             email: 'admin@example.com',
@@ -90,7 +90,7 @@ describe('Get Admin Account Details API', () => {
     const validToken = 'valid-token-abc123'
 
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
         await Account.create({
             email: 'admin@example.com',
             password: md5('AdminPass123'),
@@ -148,7 +148,7 @@ describe('Update Admin Account API', () => {
     let existingAccountId
 
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
 
         const createdAccount = await Account.create({
             email: 'admin@update.com',
@@ -226,7 +226,7 @@ describe('Delete Admin Account API', () => {
     let existingAccountId
 
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
 
         const account = await Account.create({
             email: 'delete@example.com',
@@ -286,7 +286,7 @@ describe('Delete Admin Account API', () => {
 // Checking Fetch all accounts from the database (account.controller.getAccounts() function)
 describe('Get All Accounts API', () => {
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
 
         await Account.create([
             {
@@ -337,7 +337,7 @@ describe('Get All Accounts API', () => {
 // Checking Create a new account (account.controller.createAccount() function)
 describe('Create Account API', () => {
     beforeEach(async () => {
-        await Account.deleteMany()
+        // await Account.deleteMany()
     })
 
     // CA6.1 - Successful account creation
@@ -387,7 +387,7 @@ describe('Add a new review or update an existing review API', () => {
     const bookingId = 'b789'
 
     beforeEach(async () => {
-        await Review.deleteMany()
+        // await Review.deleteMany()
         // await Hotel.deleteMany()
 
         const hotelObjectId = new mongoose.Types.ObjectId()

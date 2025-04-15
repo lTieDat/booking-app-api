@@ -24,9 +24,9 @@ describe('Booking Controller APIs', () => {
 
   beforeEach(async () => {
     await Booking.deleteMany({})
-    await Room.deleteMany({})
+    // await Room.deleteMany({})
     await Review.deleteMany({})
-    await Hotel.deleteMany({})
+    // await Hotel.deleteMany({})
     generate.generateRandomString.mockReset()
     jest.clearAllMocks()
     jest.restoreAllMocks()
