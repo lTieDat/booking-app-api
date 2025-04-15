@@ -26,8 +26,6 @@ module.exports.uploadMultipleFiles = async (req, res, next) => {
     req.body.image = overviewImageUrl
     // req.body.images = roomImageUrls
 
-    console.log('Updated Req Body:', req.body)
-
     // next()
   } catch (error) {
     console.error('Error uploading images:', error)

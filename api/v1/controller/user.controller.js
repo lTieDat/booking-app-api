@@ -44,10 +44,10 @@ module.exports.register = async (req, res) => {
     }
 
     // Generate verification token and expiry time
-    const verificationToken = generateHelper.genenrateRandomString(20)
-    const token = generateHelper.genenrateRandomString(20)
+    const verificationToken = generateHelper.generateRandomString(20)
+    const token = generateHelper.generateRandomString(20)
     const expiredAt = Date.now() + 5 * 60 * 1000 // 5 min expiry
-    const userName = 'User' + generateHelper.genenrateRandomString(5)
+    const userName = 'User' + generateHelper.generateRandomString(5)
 
     // Create a new user
     const user = new User({

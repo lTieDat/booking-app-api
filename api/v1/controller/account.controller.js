@@ -90,7 +90,6 @@ module.exports.adminLogin = async (req, res) => {
     if (!account) {
       return res.json({ message: 'Email not found', status: 400 })
     }
-    console.log(md5(password))
     if (account.password !== md5(password)) {
       return res.json({ message: 'Incorrect password', status: 400 })
     }

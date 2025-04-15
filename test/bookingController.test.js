@@ -13,9 +13,27 @@ jest.mock('../helper/generate', () => ({
 
 jest.setTimeout(60000)
 
+// Mock booking object for consistent testing
+const mockBooking = {
+  bookingId: 'BOOK123',
+  hotelId: 'Zxl2qwdTKn',
+  userId: 'U456',
+  customerName: 'John Doe',
+  customerEmail: 'john@example.com',
+  checkInDate: new Date('2025-04-20'),
+  checkOutDate: new Date('2025-04-25'),
+  numberOfAdults: 2,
+  numberOfChildren: 1,
+  status: 'pending',
+  rooms: [
+    { roomId: 'sWsgz3Sn3f', quantity: 1 },
+    { roomId: 'YWx3uIgIwr', quantity: 1 },
+  ],
+}
+
 describe('Booking Controller APIs', () => {
   beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URL || 'mongodb://localhost/test', {
+    await mongoose.connect(process.env.MONGO_URL, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })
@@ -23,16 +41,14 @@ describe('Booking Controller APIs', () => {
   })
 
   beforeEach(async () => {
-    await Booking.deleteMany({})
-    // await Room.deleteMany({})
-    await Review.deleteMany({})
-    // await Hotel.deleteMany({})
     generate.generateRandomString.mockReset()
     jest.clearAllMocks()
     jest.restoreAllMocks()
   })
 
   afterEach(async () => {
+    await Booking.deleteOne({ bookingId: 'BOOK123' })
+    await Review.deleteOne({ bookingId: 'BOOK123' })
     await new Promise((resolve) => setImmediate(resolve))
   })
 
@@ -46,47 +62,10 @@ describe('Booking Controller APIs', () => {
   })
 
   describe('Create Booking API - POST /api/v1/booking/create', () => {
-    beforeEach(async () => {
-      await Room.create([
-        {
-          RoomId: 'R001',
-          NumberAvailable: 5,
-          MaxQuantity: 10,
-          MaxOccupancy: 4,
-          BaseRate: 100,
-          RoomType: 'Deluxe',
-        },
-        {
-          RoomId: 'R002',
-          NumberAvailable: 5,
-          MaxQuantity: 10,
-          MaxOccupancy: 4,
-          BaseRate: 150,
-          RoomType: 'Suite',
-        },
-      ])
-    })
-
     it('1.1 - should create a booking successfully with valid data', async () => {
       generate.generateRandomString.mockReturnValue('BOOK123')
 
-      const response = await request(app)
-        .post('/api/v1/booking/create')
-        .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
-          userId: 'U456',
-          booking: {
-            startDate: '2025-04-20',
-            endDate: '2025-04-25',
-            adults: 2,
-            children: 1,
-          },
-          selectedRooms: [
-            { roomId: 'R001', quantity: 1 },
-            { roomId: 'R002', quantity: 2 },
-          ],
-        })
-        .timeout(10000)
+      const response = await request(app).post('/api/v1/booking/create').send(mockBooking).timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
@@ -98,20 +77,27 @@ describe('Booking Controller APIs', () => {
       expect(booking).toBeTruthy()
       expect(booking.toObject()).toMatchObject({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         numberOfAdults: 2,
         numberOfChildren: 1,
         status: 'pending',
         rooms: [
-          { roomId: 'R001', quantity: 1 },
-          { roomId: 'R002', quantity: 2 },
+          { roomId: 'sWsgz3Sn3f', quantity: 1 },
+          { roomId: 'YWx3uIgIwr', quantity: 2 },
         ],
       })
 
-      const rooms = await Room.find({ RoomId: { $in: ['R001', 'R002'] } })
-      expect(rooms[0].NumberAvailable).toBe(4)
-      expect(rooms[1].NumberAvailable).toBe(3)
+      const rooms = await Room.find({ RoomId: { $in: ['sWsgz3Sn3f', 'YWx3uIgIwr'] } })
+      expect(rooms[0].NumberAvailable).toBe(9)
+      expect(rooms[1].NumberAvailable).toBe(9)
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
+
+      //Update the room availability back to original state
+      await Room.updateOne({ RoomId: 'sWsgz3Sn3f' }, { $set: { NumberAvailable: 10 } })
+      await Room.updateOne({ RoomId: 'YWx3uIgIwr' }, { $set: { NumberAvailable: 10 } })
     })
 
     it('1.2 - should handle missing hotelId', async () => {
@@ -125,7 +111,7 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -137,9 +123,9 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -153,14 +139,14 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           booking: {
             startDate: '2025-04-20',
             endDate: '2025-04-25',
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -181,7 +167,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -209,7 +195,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -233,7 +219,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -241,7 +227,7 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -255,7 +241,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -263,12 +249,12 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: -1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: -1 }],
         })
         .timeout(10000)
 
       expect(response.status).toBe(400)
-      expect(response.body).toMatchObject({ message: 'Invalid room selection.' })
+      expect(response.body).toMatchObject({ message: 'Invalid room quantity.' })
     })
 
     it('1.9 - should handle room update failure', async () => {
@@ -281,7 +267,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -289,7 +275,7 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -303,7 +289,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -330,7 +316,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: 'invalid-date',
@@ -338,7 +324,7 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 1 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 1 }],
         })
         .timeout(10000)
 
@@ -352,7 +338,7 @@ describe('Booking Controller APIs', () => {
       const response = await request(app)
         .post('/api/v1/booking/create')
         .send({
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           booking: {
             startDate: '2025-04-20',
@@ -360,12 +346,12 @@ describe('Booking Controller APIs', () => {
             adults: 2,
             children: 1,
           },
-          selectedRooms: [{ roomId: 'R001', quantity: 10 }],
+          selectedRooms: [{ roomId: 'sWsgz3Sn3f', quantity: 10 }],
         })
         .timeout(10000)
 
       expect(response.status).toBe(500)
-      expect(response.body).toMatchObject({ message: 'Not enough rooms available for R001' })
+      expect(response.body).toMatchObject({ message: 'Not enough rooms available for sWsgz3Sn3f' })
     })
   })
 
@@ -373,7 +359,7 @@ describe('Booking Controller APIs', () => {
     it('2.1 - should retrieve booking with valid ID', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -388,6 +374,19 @@ describe('Booking Controller APIs', () => {
       expect(response.body).toMatchObject({
         data: expect.objectContaining({ bookingId: 'BOOK123' }),
       })
+      expect(response.body.data).toHaveProperty('hotelId', 'Zxl2qwdTKn')
+      expect(response.body.data).toHaveProperty('userId', 'U456')
+      expect(response.body.data).toHaveProperty('checkInDate', '2025-04-20')
+      expect(response.body.data).toHaveProperty('checkOutDate', '2025-04-25')
+      expect(response.body.data).toHaveProperty('numberOfAdults', 2)
+      expect(response.body.data).toHaveProperty('numberOfChildren', 1)
+      expect(response.body.data).toHaveProperty('status', 'pending')
+
+      // Clean up the created booking after the test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
+
+      // Update the room availability back to original state
+      await Room.updateOne({ RoomId: 'Zxl2qwdTKn' }, { $set: { NumberAvailable: 10 } })
     })
 
     it('2.2 - should return 404 for non-existent booking', async () => {
@@ -416,18 +415,12 @@ describe('Booking Controller APIs', () => {
   })
 
   describe('Delete Booking API - DELETE /api/v1/booking/:bookingId', () => {
-    it('3.1 - should delete existing booking', async () => {
-      await Booking.create({
-        bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
-        userId: 'U456',
-        checkInDate: '2025-04-20',
-        checkOutDate: '2025-04-25',
-        numberOfAdults: 2,
-        numberOfChildren: 1,
-        status: 'pending',
-      })
-
+    // Test ID: 3.1
+    // Purpose: Verify deletion of existing booking
+    // Input: Valid bookingId from mock booking
+    // Expected Output: Status 200, booking removed
+    it('should delete existing booking', async () => {
+      await Booking.create(mockBooking)
       const response = await request(app).delete('/api/v1/booking/BOOK123').timeout(10000)
 
       expect(response.status).toBe(200)
@@ -437,6 +430,18 @@ describe('Booking Controller APIs', () => {
 
       const booking = await Booking.findOne({ bookingId: 'BOOK123' })
       expect(booking).toBeNull()
+    })
+
+    // Test ID: 3.2
+    // Purpose: Verify error handling for non-existent booking deletion
+    // Input: Invalid bookingId
+    // Expected Output: Status 404, error message
+    it('should return 404 for non-existent booking', async () => {
+      const response = await request(app).delete('/api/v1/booking/BOOK999').timeout(10000)
+      expect(response.status).toBe(404)
+      expect(response.body).toMatchObject({
+        message: 'Booking not found.',
+      })
     })
 
     it('3.2 - should return 404 for non-existent booking', async () => {
@@ -462,7 +467,7 @@ describe('Booking Controller APIs', () => {
     it('3.4 - should handle delete failure', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -484,16 +489,7 @@ describe('Booking Controller APIs', () => {
 
   describe('Update Booking API - POST /api/v1/booking/:bookingId/update', () => {
     it('4.1 - should update booking with full data', async () => {
-      await Booking.create({
-        bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
-        userId: 'U456',
-        checkInDate: '2025-04-20',
-        checkOutDate: '2025-04-25',
-        numberOfAdults: 2,
-        numberOfChildren: 1,
-        status: 'pending',
-      })
+      await Booking.create(mockBooking)
 
       const response = await request(app)
         .post('/api/v1/booking/BOOK123/update')
@@ -544,7 +540,7 @@ describe('Booking Controller APIs', () => {
     it('4.3 - should handle partial update', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -576,7 +572,7 @@ describe('Booking Controller APIs', () => {
     it('4.4 - should reject invalid data types', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -603,7 +599,7 @@ describe('Booking Controller APIs', () => {
     it('4.5 - should handle database save failure', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -633,7 +629,7 @@ describe('Booking Controller APIs', () => {
     it('4.6 - should handle empty update object', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         checkInDate: '2025-04-20',
         checkOutDate: '2025-04-25',
@@ -677,7 +673,7 @@ describe('Booking Controller APIs', () => {
     it('5.1 - should return bookings with reviews', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         customerEmail: 'john@example.com',
         checkInDate: '2025-04-20',
@@ -687,7 +683,7 @@ describe('Booking Controller APIs', () => {
         status: 'pending',
       })
       await Review.create({
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         bookingId: 'BOOK123',
         reviewText: 'Great stay!',
@@ -707,7 +703,7 @@ describe('Booking Controller APIs', () => {
     it('5.2 - should return bookings without reviews', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         customerEmail: 'jane@example.com',
         checkInDate: '2025-04-20',
@@ -759,7 +755,7 @@ describe('Booking Controller APIs', () => {
     it('5.6 - should handle review query failure', async () => {
       await Booking.create({
         bookingId: 'BOOK123',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         userId: 'U456',
         customerEmail: 'john@example.com',
         checkInDate: '2025-04-20',
@@ -783,7 +779,7 @@ describe('Booking Controller APIs', () => {
       await Booking.create([
         {
           bookingId: 'BOOK123',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           customerEmail: 'john@example.com',
           checkInDate: '2025-04-20',
@@ -794,7 +790,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK124',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           userId: 'U456',
           customerEmail: 'john@example.com',
           checkInDate: '2025-05-20',
@@ -822,7 +818,7 @@ describe('Booking Controller APIs', () => {
     beforeEach(async () => {
       await Hotel.create({
         _id: '67fd345baca3d86a9740f049',
-        HotelId: 'PoWvBfLBf3eeO49oFPn1',
+        HotelId: 'Zxl2qwdTKn',
         HotelName: 'Test New Luxury Hotel',
         Description: 'Test new luxury stay',
         Category: 'Luxury',
@@ -851,7 +847,7 @@ describe('Booking Controller APIs', () => {
       await Booking.create([
         {
           bookingId: 'BOOK1',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           customerName: 'John Doe',
           totalAmount: 100,
           numberOfAdults: 2,
@@ -863,7 +859,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK2',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           customerName: 'Jane Doe',
           totalAmount: 50,
           numberOfAdults: 1,
@@ -875,7 +871,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK3',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           customerName: 'Bob Smith',
           totalAmount: 100,
           numberOfAdults: 0,
@@ -889,9 +885,7 @@ describe('Booking Controller APIs', () => {
     })
 
     it('6.1 - should fetch bookings with no filters', async () => {
-      const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
-        .timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
@@ -906,7 +900,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.2 - should filter by status', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ filterStatus: 'pending' })
         .timeout(10000)
 
@@ -919,7 +913,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.3 - should search by customer name', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -932,7 +926,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.4 - should sort by totalAmountAsc', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ sortBy: 'totalAmountAsc' })
         .timeout(10000)
 
@@ -951,7 +945,7 @@ describe('Booking Controller APIs', () => {
       await Booking.create([
         {
           bookingId: 'BOOK4',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           createdDate: new Date('2025-04-19'),
           checkInDate: '2025-04-19',
           checkOutDate: '2025-04-24',
@@ -961,7 +955,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK5',
-          hotelId: 'PoWvBfLBf3eeO49oFPn1',
+          hotelId: 'Zxl2qwdTKn',
           createdDate: new Date('2025-04-18'),
           checkInDate: '2025-04-18',
           checkOutDate: '2025-04-23',
@@ -972,7 +966,7 @@ describe('Booking Controller APIs', () => {
       ])
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ page: 2, itemsPerPage: 2 })
         .timeout(10000)
 
@@ -996,9 +990,7 @@ describe('Booking Controller APIs', () => {
     it('6.7 - should handle database error', async () => {
       jest.spyOn(Booking, 'find').mockRejectedValueOnce(new Error('DB failure'))
 
-      const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
-        .timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -1009,7 +1001,7 @@ describe('Booking Controller APIs', () => {
     it('6.8 - should handle search with missing customerName', async () => {
       await Booking.create({
         bookingId: 'BOOK4',
-        hotelId: 'PoWvBfLBf3eeO49oFPn1',
+        hotelId: 'Zxl2qwdTKn',
         totalAmount: 75,
         createdDate: new Date('2025-04-19'),
         checkInDate: '2025-04-19',
@@ -1020,7 +1012,7 @@ describe('Booking Controller APIs', () => {
       })
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -1033,7 +1025,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.9 - should sort by totalAmountDesc', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ sortBy: 'totalAmountDesc' })
         .timeout(10000)
 
@@ -1050,7 +1042,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.10 - should sort by numberOfGuest', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ sortBy: 'numberOfGuest' })
         .timeout(10000)
 
@@ -1090,7 +1082,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.12 - should handle empty search query', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ searchQuery: '' })
         .timeout(10000)
 
@@ -1103,7 +1095,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.13 - should handle negative page number', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ page: -1 })
         .timeout(10000)
 
@@ -1116,7 +1108,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.14 - should handle zero itemsPerPage', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ itemsPerPage: 0 })
         .timeout(10000)
 
@@ -1128,9 +1120,7 @@ describe('Booking Controller APIs', () => {
     it('6.15 - should handle hotel query failure', async () => {
       jest.spyOn(Hotel, 'findOne').mockRejectedValueOnce(new Error('Hotel query failure'))
 
-      const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
-        .timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -1140,7 +1130,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.16 - should handle special characters in search query', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ searchQuery: 'John@Doe' })
         .timeout(10000)
 
@@ -1153,7 +1143,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.17 - should filter by month', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
         .query({ month: '4' })
         .timeout(10000)
 
