@@ -6,14 +6,13 @@ const generateHelper = require('../../../helper/generate')
 const mailHelper = require('../../../helper/sendmail')
 const Account = require('../../../models/account.model')
 
-const handleError = (res, error, message = 'fail') => {
+const handleError = (res, error, message = 'fail', status = 500) => {
   console.error(error)
-  res.status(500).json({ message })
+  res.status(status).json({ status, message })
 }
 
-// Helper function to handle responses
 const handleResponse = (res, status, message, data = {}) => {
-  return res.status(status).json({ message: { message }, ...data })
+  return res.status(status).json({ status, message, ...data })
 }
 
 // [POST] /api/v1/users/register
@@ -29,18 +28,18 @@ module.exports.register = async (req, res) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' })
+      return handleResponse(res, 400, 'Invalid email format')
     }
 
     // Check if email already exists
     const existedEmail = await User.findOne({ email })
     if (existedEmail) {
-      return res.status(409).json({ message: 'Email already exists' })
+      return handleResponse(res, 409, 'Email already exists')
     }
 
     // Check password strength (min 8 chars)
     if (password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters long' })
+      return handleResponse(res, 400, 'Password must be at least 8 characters long')
     }
 
     // Generate verification token and expiry time
@@ -73,7 +72,7 @@ module.exports.register = async (req, res) => {
                     <h2>${verificationToken}</h2>`
     await mailHelper.sendMail(email, subject, html)
 
-    return handleResponse(res, 201, 'Registration successful. Please check your email to verify your account.', {
+    return handleResponse(res, 200, 'Registration successful. Please check your email to verify your account.', {
       token,
     })
   } catch (error) {
@@ -103,7 +102,7 @@ module.exports.verifyEmail = async (req, res) => {
     user.verificationTokenExpiresAt = null
     const token = user.token
     await user.save()
-    handleResponse(res, 200, 'Email verified successfully. You can now log in.', { token })
+    return handleResponse(res, 200, 'Email verified successfully. You can now log in.', { token })
   } catch (error) {
     handleError(res, error)
   }
@@ -117,28 +116,28 @@ module.exports.login = async (req, res) => {
     // Find user by email
     const user = await User.findOne({ email })
     if (!user) {
-      return res.status(404).json({ message: 'Email not found' })
+      return handleResponse(res, 404, 'Email not found')
     }
 
     // Check if the account is verified
     if (!user.verified) {
-      return res.status(403).json({ message: 'Account not verified' })
+      return handleResponse(res, 403, 'Account not verified')
     }
 
     // Check password
     if (user.password !== md5(password)) {
-      return res.status(403).json({ message: 'Incorrect password' })
+      return handleResponse(res, 403, 'Incorrect password')
     }
 
     // Ensure token exists in the user model
     if (!user.token) {
-      return res.status(500).json({ message: 'Authentication token not found' })
+      return handleResponse(res, 500, 'Authentication token not found')
     }
 
     // Set token in HTTP-only cookie
     res.cookie('token', user.token, { httpOnly: true, secure: true })
 
-    return res.status(200).json({ message: 'Login successful', token: user.token })
+    return handleResponse(res, 200, 'Login successful', { token: user.token })
   } catch (error) {
     console.error('Login error:', error)
     return res.status(500).json({ message: 'Login failed', error: error.message })
@@ -179,20 +178,20 @@ module.exports.reset = async (req, res) => {
   try {
     const { email, newpassword } = req.body
     if (!email || !newpassword) {
-      return res.status(400).json({ message: { message: 'Email and new password are required' } })
+      return handleResponse(res, 400, 'Email and new password are required')
     }
     const user = await User.findOne({ email, deleted: false })
     if (!user) {
-      return res.status(400).json({ message: { message: 'Invalid user' } })
+      return handleResponse(res, 400, 'Invalid user')
     }
     if (user.password === md5(newpassword)) {
-      return res.status(400).json({
-        message: { message: 'New password cannot be the same as the old password' },
-      })
+      if (user.password === md5(newpassword)) {
+        return handleResponse(res, 400, 'New password cannot be the same as the old password')
+      }
     }
     user.password = md5(newpassword)
     await user.save()
-    res.status(200).json({ message: { message: 'Password reset successfully' } })
+    return handleResponse(res, 200, 'Password reset successfully')
   } catch (error) {
     handleError(res, error)
   }
@@ -203,10 +202,7 @@ module.exports.list = async (req, res) => {
   try {
     // Ensure no middleware interferes; always attempt to fetch users
     const users = await User.find({ deleted: false }).select('fullName email')
-    res.status(200).json({
-      message: { message: 'User list' },
-      data: users,
-    })
+    return handleResponse(res, 200, 'User list', { data: users })
   } catch (error) {
     handleError(res, error)
   }
@@ -216,7 +212,7 @@ module.exports.list = async (req, res) => {
 module.exports.prefix = async (req, res) => {
   try {
     const prefix = await Prefix.find()
-    handleResponse(res, 200, 'Prefix list', { data: prefix })
+    return handleResponse(res, 200, 'Prefix list', { data: prefix })
   } catch (error) {
     handleError(res, error)
   }
@@ -239,7 +235,7 @@ module.exports.me = async (req, res) => {
       ).padStart(2, '0')}`
     }
 
-    handleResponse(res, 200, 'User details', { data: responseData, status: 200 })
+    return handleResponse(res, 200, 'User details', { data: responseData, status: 200 })
   } catch (error) {
     handleError(res, error)
   }
@@ -252,7 +248,7 @@ module.exports.update = async (req, res) => {
 
     const user = await User.findOne({ token: userToken })
     if (!user) {
-      return handleResponse(res, 404, 'User not found') // Changed from 400 to 404
+      return handleResponse(res, 404, 'User not found')
     }
 
     // Validate email format if provided
@@ -286,7 +282,7 @@ module.exports.update = async (req, res) => {
       return handleError(res, error)
     }
 
-    return res.json({ message: 'Update successful', status: 200 })
+    return handleResponse(res, 200, 'Update successful')
   } catch (error) {
     return handleError(res, error)
   }
