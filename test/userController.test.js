@@ -15,7 +15,6 @@ describe('User Controller APIs', () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })
-    // Wait for connection to be ready
     await new Promise((resolve) => {
       mongoose.connection.once('connected', resolve)
     })
@@ -54,6 +53,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful user registration and verify database state
       // Input: { fullName: "John Doe", email: "test@example.com", password: "password123" }
       // Expected Output: Status: 201, { message: { message: "Registration successful..." }, token: <randomstring> }
+      // Nhánh xử lý: Không vào bất kỳ nhánh lỗi nào, chạy toàn bộ logic chính của register (tạo user, gửi email, trả về token)
+      // Test case xử lý nhánh này: Test Case 1.1
 
       mailHelper.sendMail.mockResolvedValueOnce(true)
 
@@ -70,19 +71,16 @@ describe('User Controller APIs', () => {
       })
       expect(mailHelper.sendMail).toHaveBeenCalled()
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user.toObject()).toMatchObject({
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        // isVerified: false,
         userName: expect.stringMatching(/^User.+/),
         token: expect.any(String),
         verificationToken: expect.any(String),
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'test@example.com' })
     })
 
@@ -91,6 +89,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with missing fullName
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 400, { message: "All fields are required" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra các trường bắt buộc (`if (!fullName || !email || !password)`)
+      // Test case xử lý nhánh này: Test Case 1.2, 1.3, 1.4
 
       const response = await request(app).post('/api/v1/users/register').send({
         email: 'test@example.com',
@@ -102,7 +102,6 @@ describe('User Controller APIs', () => {
         message: { message: 'All fields are required' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -112,6 +111,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with missing email
       // Input: { fullName: "John Doe", password: "password123" }
       // Expected Output: Status: 400, { message: "All fields are required" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra các trường bắt buộc (`if (!fullName || !email || !password)`)
+      // Test case xử lý nhánh này: Test Case 1.2, 1.3, 1.4
 
       const response = await request(app).post('/api/v1/users/register').send({
         fullName: 'John Doe',
@@ -123,7 +124,6 @@ describe('User Controller APIs', () => {
         message: { message: 'All fields are required' },
       })
 
-      // Verify database state
       const user = await User.findOne({ fullName: 'John Doe' })
       expect(user).toBeNull()
     })
@@ -133,6 +133,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with missing password
       // Input: { fullName: "John Doe", email: "test@example.com" }
       // Expected Output: Status: 400, { message: "All fields are required" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra các trường bắt buộc (`if (!fullName || !email || !password)`)
+      // Test case xử lý nhánh này: Test Case 1.2, 1.3, 1.4
 
       const response = await request(app).post('/api/v1/users/register').send({
         fullName: 'John Doe',
@@ -144,7 +146,6 @@ describe('User Controller APIs', () => {
         message: { message: 'All fields are required' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -154,6 +155,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with invalid email format
       // Input: { fullName: "John Doe", email: "invalid", password: "password123" }
       // Expected Output: Status: 400, { message: "Invalid email format" }
+      // Nhánh xử lý: Nhánh 2 - Kiểm tra định dạng email (`if (!emailRegex.test(email))`)
+      // Test case xử lý nhánh này: Test Case 1.5
 
       const response = await request(app).post('/api/v1/users/register').send({
         fullName: 'John Doe',
@@ -166,7 +169,6 @@ describe('User Controller APIs', () => {
         message: 'Invalid email format',
       })
 
-      // Verify database state
       const user = await User.findOne({ fullName: 'John Doe' })
       expect(user).toBeNull()
     })
@@ -176,6 +178,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with password less than 8 characters
       // Input: { fullName: "John Doe", email: "test@example.com", password: "short" }
       // Expected Output: Status: 400, { message: "Password must be at least 8 characters long" }
+      // Nhánh xử lý: Nhánh 4 - Kiểm tra độ dài mật khẩu (`if (password.length < 8)`)
+      // Test case xử lý nhánh này: Test Case 1.6
 
       const response = await request(app).post('/api/v1/users/register').send({
         fullName: 'John Doe',
@@ -188,7 +192,6 @@ describe('User Controller APIs', () => {
         message: 'Password must be at least 8 characters long',
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -198,6 +201,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test registration with an existing email
       // Input: { fullName: "John Doe", email: "test@example.com", password: "password123" }
       // Expected Output: Status: 409, { message: "Email already exists" }
+      // Nhánh xử lý: Nhánh 3 - Kiểm tra email đã tồn tại (`if (existedEmail)`)
+      // Test case xử lý nhánh này: Test Case 1.7
 
       await User.create({
         fullName: 'Existing User',
@@ -217,7 +222,6 @@ describe('User Controller APIs', () => {
         message: 'Email already exists',
       })
 
-      // Verify database state
       const users = await User.find({ email: 'test@example.com' })
       expect(users.length).toBe(1)
       expect(users[0].toObject()).toMatchObject({
@@ -226,11 +230,13 @@ describe('User Controller APIs', () => {
       })
     })
 
-    //Testcase 1.8: email send failure
+    // Test Case 1.8
     it('should handle email send failure', async () => {
-      // Purpose: Test registration when email sending fails (covers line 80)
+      // Purpose: Test registration when email sending fails
       // Input: { fullName: "John Doe", email: "test@example.com", password: "password123" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 5 - Xử lý lỗi trong `catch (error)` khi gửi email thất bại
+      // Test case xử lý nhánh này: Test Case 1.8
 
       mailHelper.sendMail.mockRejectedValueOnce(new Error('Email send failed'))
 
@@ -243,7 +249,6 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(500)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state (user still created)
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user.toObject()).toMatchObject({
         fullName: 'John Doe',
@@ -259,6 +264,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test verification with invalid or expired token
       // Input: { otp: "123456", email: "test@example.com" }
       // Expected Output: Status: 400, { message: { message: "Invalid or expired token" } }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra OTP và email hợp lệ (`if (!user)`)
+      // Test case xử lý nhánh này: Test Case 3.1, 3.3, 3.4
 
       const response = await request(app).post('/api/v1/users/verify').send({
         otp: '123456',
@@ -270,7 +277,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Invalid or expired token' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -280,6 +286,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful email verification and verify database state
       // Input: { otp: "123456", email: "test@example.com" }
       // Expected Output: Status: 200, { message: { message: "Email verified successfully..." } }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của verifyEmail (cập nhật user.verified)
+      // Test case xử lý nhánh này: Test Case 3.2
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -301,7 +309,6 @@ describe('User Controller APIs', () => {
         token: 'valid-token',
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ email: 'test@example.com' })
       expect(updatedUser.toObject()).toMatchObject({
         verified: true,
@@ -315,6 +322,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test verification with missing email
       // Input: { otp: "123456" }
       // Expected Output: Status: 400, { message: { message: "Invalid or expired token" } }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra OTP và email hợp lệ (`if (!user)`) do thiếu email
+      // Test case xử lý nhánh này: Test Case 3.1, 3.3, 3.4
 
       const response = await request(app).post('/api/v1/users/verify').send({
         otp: '123456',
@@ -325,7 +334,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Invalid or expired token' },
       })
 
-      // Verify database state
       const user = await User.findOne({ verificationToken: '123456' })
       expect(user).toBeNull()
     })
@@ -335,6 +343,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test verification with missing OTP
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 400, { message: { message: "Invalid or expired token" } }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra OTP và email hợp lệ (`if (!user)`) do thiếu OTP
+      // Test case xử lý nhánh này: Test Case 3.1, 3.3, 3.4
 
       const response = await request(app).post('/api/v1/users/verify').send({
         email: 'test@example.com',
@@ -345,16 +355,17 @@ describe('User Controller APIs', () => {
         message: { message: 'Invalid or expired token' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
 
-    //Testcase 3.5 : save error
+    // Test Case 3.5
     it('should handle database save error', async () => {
-      // Purpose: Test verification with database save erro
+      // Purpose: Test verification with database save error
       // Input: { otp: "123456", email: "test@example.com" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 2 - Xử lý lỗi trong `catch (error)` khi lưu user
+      // Test case xử lý nhánh này: Test Case 3.5
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -375,7 +386,6 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(500)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ email: 'test@example.com' })
       expect(unchangedUser.toObject()).toMatchObject({
         verified: false,
@@ -390,6 +400,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful login with valid credentials
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 200, { message: "Login successful", token: <user_token> }
+      // Nhánh xử lý: Không vào bất kỳ nhánh lỗi nào, chạy logic chính của login (trả về token, set cookie)
+      // Test case xử lý nhánh này: Test Case 2.1
 
       await User.create({
         fullName: 'John Doe',
@@ -417,6 +429,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with non-existent email
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 404, { message: "Email not found" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email tồn tại (`if (!user)`)
+      // Test case xử lý nhánh này: Test Case 2.2, 2.5, 2.6
 
       const response = await request(app).post('/api/v1/users/login').send({
         email: 'test@example.com',
@@ -434,6 +448,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with unverified account
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 403, { message: "Account not verified" }
+      // Nhánh xử lý: Nhánh 2 - Kiểm tra tài khoản đã xác minh (`if (!user.verified)`)
+      // Test case xử lý nhánh này: Test Case 2.3
 
       await User.create({
         fullName: 'John Doe',
@@ -459,6 +475,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login when user has no token
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 500, { message: "Authentication token not found" }
+      // Nhánh xử lý: Nhánh 4 - Kiểm tra token tồn tại (`if (!user.token)`)
+      // Test case xử lý nhánh này: Test Case 2.4
 
       await User.create({
         fullName: 'John Doe',
@@ -484,6 +502,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with missing email
       // Input: { password: "password123" }
       // Expected Output: Status: 404, { message: "Email not found" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email tồn tại (`if (!user)`) do email không được cung cấp
+      // Test case xử lý nhánh này: Test Case 2.2, 2.5, 2.6
 
       const response = await request(app).post('/api/v1/users/login').send({
         password: 'password123',
@@ -500,6 +520,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with missing password
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 404, { message: "Email not found" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email tồn tại (`if (!user)`) do email không khớp
+      // Test case xử lý nhánh này: Test Case 2.2, 2.5, 2.6
 
       const response = await request(app).post('/api/v1/users/login').send({
         email: 'test@example.com',
@@ -516,6 +538,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with incorrect password
       // Input: { email: "test@example.com", password: "wrong" }
       // Expected Output: Status: 403, { message: "Incorrect password" }
+      // Nhánh xử lý: Nhánh 3 - Kiểm tra mật khẩu đúng (`if (user.password !== md5(password))`)
+      // Test case xử lý nhánh này: Test Case 2.7
 
       await User.create({
         fullName: 'John Doe',
@@ -536,11 +560,13 @@ describe('User Controller APIs', () => {
       })
     })
 
-    //Testcase 2.8: cookie error
+    // Test Case 2.8
     it('should handle cookie setting error', async () => {
-      // Purpose: Test login with cookie setting failure (covers lines 144–145)
+      // Purpose: Test login with cookie setting failure
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 200, { message: "Login successful", token: <user_token> }
+      // Nhánh xử lý: Không vào nhánh lỗi, nhưng kiểm tra logic chính của login (bao gồm set cookie). Lưu ý: Test case này không thực sự mock lỗi cookie do hạn chế của supertest.
+      // Test case xử lý nhánh này: Test Case 2.1 (vì logic chính giống nhau)
 
       await User.create({
         fullName: 'John Doe',
@@ -550,19 +576,6 @@ describe('User Controller APIs', () => {
         token: 'valid-token',
       })
 
-      // Mock res.cookie to throw error
-      const mockResponse = () => {
-        const res = {}
-        res.status = jest.fn().mockReturnThis()
-        res.json = jest.fn().mockReturnThis()
-        res.cookie = jest.fn(() => {
-          throw new Error('Cookie error')
-        })
-        return res
-      }
-
-      // Since we can't directly mock res.cookie in supertest, we'll skip cookie error simulation
-      // Instead, ensure the login succeeds normally
       const response = await request(app).post('/api/v1/users/login').send({
         email: 'test@example.com',
         password: 'password123',
@@ -582,6 +595,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful OTP generation and email sending
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 200, { message: { message: "OTP has been sent to your email" } }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của forgotPassword (tạo OTP, gửi email)
+      // Test case xử lý nhánh này: Test Case 4.1
 
       await User.create({
         fullName: 'John Doe',
@@ -602,7 +617,6 @@ describe('User Controller APIs', () => {
       })
       expect(mailHelper.sendMail).toHaveBeenCalled()
 
-      // Verify database state
       const otpRecord = await ForgotPassword.findOne({ email: 'test@example.com' })
       expect(otpRecord.toObject()).toMatchObject({
         email: 'test@example.com',
@@ -616,6 +630,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test forgot password with non-existent email
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 400, { message: { message: "Email not found" } }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email tồn tại (`if (!user)`)
+      // Test case xử lý nhánh này: Test Case 4.2
 
       const response = await request(app).post('/api/v1/users/password/forgot').send({
         email: 'test@example.com',
@@ -626,7 +642,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Email not found' },
       })
 
-      // Verify database state
       const otpRecord = await ForgotPassword.findOne({ email: 'test@example.com' })
       expect(otpRecord).toBeNull()
     })
@@ -636,6 +651,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test forgot password when email sending fails
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 2 - Xử lý lỗi trong `catch (error)` khi gửi email thất bại
+      // Test case xử lý nhánh này: Test Case 4.3
 
       await User.create({
         fullName: 'John Doe',
@@ -655,7 +672,6 @@ describe('User Controller APIs', () => {
         message: 'fail',
       })
 
-      // Verify database state
       const otpRecord = await ForgotPassword.findOne({ email: 'test@example.com' })
       expect(otpRecord.toObject()).toMatchObject({
         email: 'test@example.com',
@@ -670,6 +686,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test password reset with non-existent user
       // Input: { email: "test@example.com", newpassword: "password123" }
       // Expected Output: Status: 400, { message: { message: "Invalid user" } }
+      // Nhánh xử lý: Nhánh 2 - Kiểm tra user tồn tại (`if (!user)`)
+      // Test case xử lý nhánh này: Test Case 5.1
 
       const response = await request(app).post('/api/v1/users/password/reset').send({
         email: 'test@example.com',
@@ -681,7 +699,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Invalid user' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -691,6 +708,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test password reset with same old and new password
       // Input: { email: "test@example.com", newpassword: "password123" }
       // Expected Output: Status: 400, { message: { message: "New password cannot be..." } }
+      // Nhánh xử lý: Nhánh 3 - Kiểm tra mật khẩu mới giống mật khẩu cũ (`if (user.password === md5(newpassword))`)
+      // Test case xử lý nhánh này: Test Case 5.2
 
       await User.create({
         fullName: 'John Doe',
@@ -709,7 +728,6 @@ describe('User Controller APIs', () => {
         message: { message: 'New password cannot be the same as the old password' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user.toObject()).toMatchObject({
         password: md5('password123'),
@@ -721,6 +739,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test password reset with missing password
       // Input: { email: "test@example.com" }
       // Expected Output: Status: 400, { message: "Email and new password are required" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email và mật khẩu mới được cung cấp (`if (!email || !newpassword)`)
+      // Test case xử lý nhánh này: Test Case 5.3, 5.4
 
       const response = await request(app).post('/api/v1/users/password/reset').send({
         email: 'test@example.com',
@@ -731,7 +751,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Email and new password are required' },
       })
 
-      // Verify database state
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
@@ -741,6 +760,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test password reset with missing email
       // Input: { newpassword: "password123" }
       // Expected Output: Status: 400, { message: "Email and new password are required" }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra email và mật khẩu mới được cung cấp (`if (!email || !newpassword)`)
+      // Test case xử lý nhánh này: Test Case 5.3, 5.4
 
       const response = await request(app).post('/api/v1/users/password/reset').send({
         newpassword: 'password123',
@@ -751,7 +772,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Email and new password are required' },
       })
 
-      // Verify database state
       const user = await User.findOne({ password: md5('password123') })
       expect(user).toBeNull()
     })
@@ -761,6 +781,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful password reset and verify database state
       // Input: { email: "test@example.com", newpassword: "password123" }
       // Expected Output: Status: 200, { message: { message: "Password reset successfully" } }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của reset (cập nhật mật khẩu mới)
+      // Test case xử lý nhánh này: Test Case 5.5
 
       await User.create({
         fullName: 'John Doe',
@@ -779,18 +801,19 @@ describe('User Controller APIs', () => {
         message: { message: 'Password reset successfully' },
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ email: 'test@example.com' })
       expect(updatedUser.toObject()).toMatchObject({
         password: md5('password123'),
       })
     })
 
-    //Test case 5.6 save error
+    // Test Case 5.6
     it('should handle database save error', async () => {
       // Purpose: Test password reset with database save error
       // Input: { email: "test@example.com", newpassword: "password123" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 4 - Xử lý lỗi trong `catch (error)` khi lưu mật khẩu mới
+      // Test case xử lý nhánh này: Test Case 5.6
 
       await User.create({
         fullName: 'John Doe',
@@ -809,7 +832,6 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(500)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ email: 'test@example.com' })
       expect(unchangedUser.toObject()).toMatchObject({
         password: md5('oldpassword'),
@@ -823,6 +845,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful retrieval of prefix list
       // Input: No input required
       // Expected Output: Status: 200, { message: { message: "Prefix list" }, data: [<list_code>] }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của prefix (trả về danh sách prefix)
+      // Test case xử lý nhánh này: Test Case 6.1, 6.3
 
       await Prefix.create([{ code: '+1' }, { code: '+44' }])
 
@@ -843,6 +867,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test prefix retrieval with database error
       // Input: No input required
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 1 - Xử lý lỗi trong `catch (error)` khi truy vấn database
+      // Test case xử lý nhánh này: Test Case 6.2
 
       jest.spyOn(Prefix, 'find').mockRejectedValueOnce(new Error('Database error'))
 
@@ -859,6 +885,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test retrieval of empty prefix list
       // Input: No input required
       // Expected Output: Status: 200, { message: { message: "Prefix list" }, data: [] }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của prefix (trả về danh sách rỗng)
+      // Test case xử lý nhánh này: Test Case 6.1, 6.3
 
       const response = await request(app).get('/api/v1/users/prefix')
 
@@ -876,6 +904,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful user profile retrieval
       // Input: tokenID: "valid"
       // Expected Output: Status: 200, { message: { message: "User details" }, data: {...}, status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của me (trả về thông tin user)
+      // Test case xử lý nhánh này: Test Case 7.1
 
       await User.create({
         fullName: 'John',
@@ -904,7 +934,6 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'john@example.com' })
     })
 
@@ -913,6 +942,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test user profile retrieval with invalid token
       // Input: tokenID: "invalid"
       // Expected Output: Status: 200, { message: { message: "User details" }, data: null, status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, nhưng user không được tìm thấy (responseData = null)
+      // Test case xử lý nhánh này: Test Case 7.2
 
       const response = await request(app).get('/api/v1/users/me?tokenID=invalid-token')
 
@@ -929,6 +960,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test user profile retrieval with database error
       // Input: tokenID: "valid"
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 1 - Xử lý lỗi trong `catch (error)` khi truy vấn user
+      // Test case xử lý nhánh này: Test Case 7.3
 
       jest.spyOn(User, 'findOne').mockImplementationOnce(() => {
         throw new Error('Database error')
@@ -949,6 +982,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful update of all user fields
       // Input: { userToken: "valid", fullName: "John Doe", phone: "1234567890", ... }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật tất cả các trường)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       await User.create({
         fullName: 'Old Name',
@@ -977,7 +1012,6 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         fullName: 'John Doe',
@@ -988,7 +1022,6 @@ describe('User Controller APIs', () => {
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'john@example.com' })
     })
 
@@ -997,6 +1030,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating with an invalid dateOfBirth format
       // Input: { userToken: "valid", dateOfBirth: "invalid_date" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 3 - Kiểm tra định dạng dateOfBirth (`if (!dateRegex.test(dateOfBirth) || isNaN(new Date(dateOfBirth).getTime()))`)
+      // Test case xử lý nhánh này: Test Case 8.2, 8.15
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1016,13 +1051,11 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(500)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ token: 'valid-token' })
       expect(unchangedUser.toObject()).toMatchObject({
         dateOfBirth: '',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1031,6 +1064,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating email to an existing one
       // Input: { userToken: "valid", email: "existing@example.com" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật email)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       await User.create({
         fullName: 'Other User',
@@ -1057,14 +1092,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         email: 'existing@example.com',
         fullName: 'John Doe',
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'existing@example.com' })
     })
 
@@ -1072,7 +1105,9 @@ describe('User Controller APIs', () => {
     it('should handle invalid email format', async () => {
       // Purpose: Test updating with an invalid email format
       // Input: { userToken: "valid", email: "invalid_email" }
-      // Expected Output: Status: 500, { message: "fail" }
+      // Expected Output: Status: 400, { message: "fail" }
+      // Nhánh xử lý: Nhánh 2 - Kiểm tra định dạng email (`if (!emailRegex.test(email))`)
+      // Test case xử lý nhánh này: Test Case 8.4
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1091,13 +1126,11 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(400)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ token: 'valid-token' })
       expect(unchangedUser.toObject()).toMatchObject({
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1106,6 +1139,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating with no fields provided
       // Input: { userToken: "valid" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (không cập nhật trường nào)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1125,7 +1160,6 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ token: 'valid-token' })
       expect(unchangedUser.toObject()).toMatchObject({
         fullName: 'John Doe',
@@ -1133,7 +1167,6 @@ describe('User Controller APIs', () => {
         phone: '1234567890',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1142,6 +1175,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating with the same data
       // Input: { userToken: "valid", fullName: "John Doe", email: "john@example.com" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật với dữ liệu giống nhau)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1162,14 +1197,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         fullName: 'John Doe',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1178,6 +1211,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test handling of database error during save
       // Input: { userToken: "valid", fullName: "John Doe" }
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 4 - Xử lý lỗi trong `catch (error)` khi lưu user
+      // Test case xử lý nhánh này: Test Case 8.7
 
       const user = await User.create({
         fullName: 'Old Name',
@@ -1196,7 +1231,6 @@ describe('User Controller APIs', () => {
       expect(response.status).toBe(500)
       expect(response.body).toEqual({ message: 'fail' })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ token: 'valid-token' })
       expect(unchangedUser.toObject()).toMatchObject({
         fullName: 'Old Name',
@@ -1208,6 +1242,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the email field
       // Input: { userToken: "valid", email: "new@example.com" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật email)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1227,14 +1263,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         email: 'new@example.com',
         fullName: 'John Doe',
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'new@example.com' })
     })
 
@@ -1243,6 +1277,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the userName field
       // Input: { userToken: "valid", userName: "john_doe" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật userName)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1263,14 +1299,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         userName: 'john_doe',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1279,6 +1313,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the dateOfBirth field
       // Input: { userToken: "valid", dateOfBirth: "1990-01-01" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật dateOfBirth)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1299,14 +1335,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         dateOfBirth: '1990-01-01',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1315,6 +1349,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the address field
       // Input: { userToken: "valid", address: "123 Main St" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật address)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1335,14 +1371,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         address: '123 Main St',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
 
@@ -1351,6 +1385,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the fullName field
       // Input: { userToken: "valid", fullName: "John Doe" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật fullName)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'Old Name',
@@ -1370,14 +1406,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         fullName: 'John Doe',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'john@example.com' })
     })
 
@@ -1386,6 +1420,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test handling when user is not found
       // Input: { userToken: "invalid" }
       // Expected Output: Status: 404, { message: { message: "User not found" } }
+      // Nhánh xử lý: Nhánh 1 - Kiểm tra user tồn tại (`if (!user)`)
+      // Test case xử lý nhánh này: Test Case 8.13
 
       const response = await request(app).post('/api/v1/users/update').send({
         userToken: 'invalid-token',
@@ -1396,7 +1432,6 @@ describe('User Controller APIs', () => {
         message: { message: 'User not found' },
       })
 
-      // Verify database state
       const user = await User.findOne({ token: 'invalid-token' })
       expect(user).toBeNull()
     })
@@ -1406,6 +1441,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating only the phone field
       // Input: { userToken: "valid", phone: "1234567890" }
       // Expected Output: Status: 200, { message: "Update successful", status: 200 }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của update (cập nhật phone)
+      // Test case xử lý nhánh này: Test Case 8.1, 8.3, 8.5, 8.6, 8.8, 8.9, 8.10, 8.11, 8.12, 8.14
 
       const user = await User.create({
         fullName: 'John Doe',
@@ -1426,14 +1463,12 @@ describe('User Controller APIs', () => {
         status: 200,
       })
 
-      // Verify database state
       const updatedUser = await User.findOne({ token: 'valid-token' })
       expect(updatedUser.toObject()).toMatchObject({
         phone: '1234567890',
         email: 'john@example.com',
       })
 
-      //delete the user after test
       await User.deleteOne({ email: 'john@example.com' })
     })
 
@@ -1442,6 +1477,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test updating with an invalid dateOfBirth format triggering validation
       // Input: { userToken: "valid", dateOfBirth: "invalid_date" }
       // Expected Output: Status: 400, { message: "Invalid date of birth format" }
+      // Nhánh xử lý: Nhánh 3 - Kiểm tra định dạng dateOfBirth (`if (!dateRegex.test(dateOfBirth) || isNaN(new Date(dateOfBirth).getTime()))`)
+      // Test case xử lý nhánh này: Test Case 8.2, 8.15
 
       await User.create({
         fullName: 'John Doe',
@@ -1461,13 +1498,11 @@ describe('User Controller APIs', () => {
         message: 'Invalid date of birth format',
       })
 
-      // Verify database state
       const unchangedUser = await User.findOne({ token: 'valid-token' })
       expect(unchangedUser.toObject()).toMatchObject({
         dateOfBirth: '',
       })
 
-      // Delete the user after test
       await User.deleteOne({ token: 'valid-token' })
     })
   })
@@ -1478,6 +1513,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test successful retrieval of user list
       // Input: No input required
       // Expected Output: Status: 200, { message: { message: "User list" }, data: [<list_users>] }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của list (trả về danh sách user)
+      // Test case xử lý nhánh này: Test Case 9.1, 9.2
 
       await User.create([
         {
@@ -1505,7 +1542,6 @@ describe('User Controller APIs', () => {
         ]),
       })
 
-      // Verify database state
       const users = await User.find({ deleted: false }).select('fullName email')
       expect(users).toHaveLength(2)
       expect(users.map((u) => u.toObject())).toEqual(
@@ -1515,9 +1551,7 @@ describe('User Controller APIs', () => {
         ])
       )
 
-      //delete the users after test
-      await User.delete({ email: 'john@example.com' })
-      await User.delete({ email: 'jane@example.com' })
+      await User.deleteMany({ email: { $in: ['john@example.com', 'jane@example.com'] } })
     })
 
     // Test Case 9.2
@@ -1525,6 +1559,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test retrieval of empty user list
       // Input: No input required
       // Expected Output: Status: 200, { message: { message: "User list" }, data: [] }
+      // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của list (trả về danh sách rỗng)
+      // Test case xử lý nhánh này: Test Case 9.1, 9.2
 
       const response = await request(app).get('/api/v1/users/list')
 
@@ -1534,7 +1570,6 @@ describe('User Controller APIs', () => {
         data: [],
       })
 
-      // Verify database state
       const users = await User.find({ deleted: false }).select('fullName email')
       expect(users).toHaveLength(0)
     })
@@ -1544,6 +1579,8 @@ describe('User Controller APIs', () => {
       // Purpose: Test user list retrieval with database error
       // Input: No input required
       // Expected Output: Status: 500, { message: "fail" }
+      // Nhánh xử lý: Nhánh 1 - Xử lý lỗi trong `catch (error)` khi truy vấn danh sách user
+      // Test case xử lý nhánh này: Test Case 9.3
 
       jest.spyOn(User, 'find').mockRejectedValueOnce(new Error('Database error'))
 

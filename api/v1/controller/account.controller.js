@@ -98,7 +98,6 @@ module.exports.adminLogin = async (req, res) => {
     res.json({
       message: 'Login successful',
       status: 200,
-      token,
       data: account,
     })
   } catch (error) {
