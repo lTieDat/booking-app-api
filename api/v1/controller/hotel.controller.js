@@ -10,20 +10,21 @@ module.exports.search = async (req, res) => {
 
     // Check if country is provided
     if (!country) {
-      return res.json({
-        status: 404,
+      return res.status(400).json({
         message: 'Country is required.',
         data: null,
       })
     }
 
     const searchQuery = {}
-    if (city !== undefined && city !== 'undefined') {
+    if (city && city !== 'undefined') {
       searchQuery['Address.City'] = city
     }
-    if (country !== undefined && country !== 'undefined') {
+    if (country && country !== 'undefined') {
       searchQuery['Address.Country'] = country
     }
+
+    console.log('Search query:', searchQuery)
 
     const hotels = await Hotel.find(searchQuery)
 
@@ -45,19 +46,20 @@ module.exports.search = async (req, res) => {
     // Room filtering
     const roomFilter = {
       HotelId: { $in: hotels.map((hotel) => hotel.HotelId) },
-      NumberAvailable: { $gte: requiredRooms }, // Ensure enough rooms are available
+      // NumberAvailable: { $gte: requiredRooms },
     }
 
+    console.log('Room filter:', roomFilter)
+
     // Add roomTags to filter if they exist
-    if (roomTags) {
+    if (roomTags && roomTags !== 'undefined') {
       const roomTagsArray = roomTags.split(',')
       roomFilter.RoomTags = { $in: roomTagsArray }
     }
-    // const roomInfos = await Room.find(roomFilter);
-    const roomInfos = await Room.find({
-      HotelId: { $in: hotels.map((hotel) => hotel.HotelId) },
-      NumberAvailable: { $gte: requiredRooms },
-    })
+
+    // const roomInfos = await Room.find(roomFilter)
+    const roomInfos = await Room.find({ HotelId: { $in: hotels.map((hotel) => hotel.HotelId) } })
+    console.log('Room information:', roomInfos.length)
 
     // Filter out hotels with no available rooms and get the lowest and highest price for each hotel
     const returnHotels = hotels
@@ -73,11 +75,7 @@ module.exports.search = async (req, res) => {
           const roomTags = hotelRooms.map((room) => room.RoomTags).flat()
 
           if (roomTags.length === 0) {
-            return res.json({
-              status: 404,
-              message: 'No hotels found with available rooms for the specified services.',
-              data: null,
-            })
+            return null // Skip hotels with no matching room tags
           }
           return {
             ...hotel.toObject(),
@@ -90,24 +88,25 @@ module.exports.search = async (req, res) => {
         return null
       })
       .filter((hotel) => hotel !== null)
+
+    console.log('Filtered hotels:', returnHotels)
+
     if (returnHotels.length === 0) {
-      return res.json({
-        status: 404,
-        message: 'No hotels found with available rooms for the specified location.',
+      return res.status(404).json({
+        message: 'No hotels found with available rooms for the specified criteria.',
         data: null,
       })
     }
 
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: 'Hotels found.',
       data: returnHotels,
+      status: 200,
     })
   } catch (error) {
     console.error('Error during hotel search:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while searching for hotels.',
+    return res.status(500).json({
+      message: 'Internal server error.',
       data: null,
     })
   }
@@ -121,26 +120,31 @@ module.exports.getHotelById = async (req, res) => {
 
     const hotel = await Hotel.findOne({ HotelId: hotelId })
     if (!hotel) {
-      return res.json({
-        status: 404,
+      return res.status(404).json({
         message: 'Hotel not found.',
+        data: null,
       })
     }
+
     const roomOfhotel = await Room.find({ HotelId: hotelId })
     const images = roomOfhotel.map((room) => room.Images.url)
     const roomTags = roomOfhotel.map((room) => room.RoomTags).flat()
+
     const adultsCount = parseInt(adults, 10) || 0
     const childrenCount = parseInt(children, 10) || 0
     const totalGuests = adultsCount + childrenCount
     const roomsCount = parseInt(rooms, 10) || 1
+
     const maxGuestsPerRoom = 4
     let requiredRooms = Math.ceil(totalGuests / maxGuestsPerRoom) || 0
     requiredRooms = Math.max(requiredRooms, roomsCount)
+
     const roomFilter = {
       HotelId: hotelId,
       NumberAvailable: { $gte: requiredRooms },
     }
     const roomInfos = await Room.find(roomFilter)
+
     const returnHotel = {
       ...hotel.toObject(),
       Rooms: roomInfos,
@@ -148,42 +152,38 @@ module.exports.getHotelById = async (req, res) => {
       RoomTags: [...new Set(roomTags)],
     }
 
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: 'Hotel found.',
       data: returnHotel,
     })
   } catch (error) {
-    console.error('Error during hotel search:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while searching for hotels.',
+    console.error('Error fetching hotel:', error)
+    return res.status(500).json({
+      message: 'Internal server error.',
       data: null,
     })
   }
 }
 
-//[GET] /api/v1/hotel/:roomId
+// [GET] /api/v1/hotel/:roomId
 module.exports.getHotelRooms = async (req, res) => {
   try {
     const { roomId } = req.params
     const room = await Room.findOne({ RoomId: roomId })
     if (!room) {
-      return res.json({
-        status: 404,
-        message: 'room not found.',
+      return res.status(404).json({
+        message: 'Room not found.',
+        data: null,
       })
     }
-    return res.json({
-      status: 200,
-      message: 'room found.',
+    return res.status(200).json({
+      message: 'Room found.',
       data: room,
     })
   } catch (error) {
-    console.error('Error during room search:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while searching for room.',
+    console.error('Error fetching room:', error)
+    return res.status(500).json({
+      message: 'Internal server error.',
       data: null,
     })
   }
@@ -198,14 +198,14 @@ module.exports.addReview = async (req, res) => {
     // Fetch the existing review and hotel in parallel
     const [existingReview, hotel] = await Promise.all([
       Review.findOne({ hotelId, userId, bookingId }),
-      Hotel.findOne({ hotelId }),
+      Hotel.findOne({ HotelId: hotelId }),
     ])
 
     // If the hotel is not found, return an error response
     if (!hotel) {
       return res.status(404).json({
-        status: 404,
         message: 'Hotel not found.',
+        data: null,
       })
     }
 
@@ -238,16 +238,15 @@ module.exports.addReview = async (req, res) => {
     hotel.rating = totalRating
     await hotel.save()
 
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: responseMessage,
-      review: savedReview,
+      data: savedReview,
     })
   } catch (error) {
     console.error('Error adding or updating review:', error)
     return res.status(500).json({
-      status: 500,
-      message: 'An error occurred while processing the review.',
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
@@ -257,21 +256,20 @@ module.exports.getReviews = async (req, res) => {
   try {
     const { hotelId } = req.params
     const reviews = await Review.find({ hotelId })
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: 'Reviews found.',
       data: reviews,
     })
   } catch (error) {
-    console.error('Error getting reviews:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while getting reviews.',
+    console.error('Error fetching reviews:', error)
+    return res.status(500).json({
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
 
-//[GET] /api/v1/hotel/:hotelId/statistics
+// [GET] /api/v1/hotel/:hotelId/statistics
 module.exports.getHotelStatistics = async (req, res) => {
   try {
     const { hotelId } = req.params
@@ -287,8 +285,8 @@ module.exports.getHotelStatistics = async (req, res) => {
     // If the hotel is not found, return an error response
     if (!hotel) {
       return res.status(404).json({
-        status: 404,
         message: 'Hotel not found.',
+        data: null,
       })
     }
 
@@ -319,7 +317,7 @@ module.exports.getHotelStatistics = async (req, res) => {
         const checkOut = new Date(booking.checkOutDate)
         const duration = (checkOut - checkIn) / (1000 * 60 * 60 * 24)
         return sum + duration
-      }, 0) / totalBookings
+      }, 0) / (totalBookings || 1)
 
     // Calculate customer count by country
     const customerCountByCountry = bookings.reduce((counts, booking) => {
@@ -334,9 +332,7 @@ module.exports.getHotelStatistics = async (req, res) => {
       taxiShuttle: bookings.filter((booking) => booking.taxiShuttle).length,
     }
 
-    // Return statistics in the expected structure
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: 'Hotel statistics found.',
       data: {
         hotel: {
@@ -359,19 +355,20 @@ module.exports.getHotelStatistics = async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Error getting hotel statistics:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while getting hotel statistics.',
+    console.error('Error fetching hotel statistics:', error)
+    return res.status(500).json({
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
 
-//[POST] /api/v1/hotel/updateInfo/:hotel
+// [POST] /api/v1/hotel/updateInfo/:hotel
 module.exports.updateHotelInfo = async (req, res) => {
   try {
     const hotelId = req.query.hotelID
     const { hotelData, image } = req.body
+
     // Parse the hotelData JSON string
     const parsedHotelData = JSON.parse(hotelData)
 
@@ -379,8 +376,8 @@ module.exports.updateHotelInfo = async (req, res) => {
     const hotel = await Hotel.findOne({ HotelId: hotelId })
     if (!hotel) {
       return res.status(404).json({
-        status: 404,
         message: 'Hotel not found.',
+        data: null,
       })
     }
 
@@ -403,20 +400,19 @@ module.exports.updateHotelInfo = async (req, res) => {
     await hotel.save()
 
     return res.status(200).json({
-      status: 200,
       message: 'Hotel information updated successfully.',
       data: hotel,
     })
   } catch (error) {
     console.error('Error updating hotel info:', error)
     return res.status(500).json({
-      status: 500,
-      message: 'An error occurred while updating hotel information.',
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
 
-//[POST] /api/v1/hotel/updateRoom/:room
+// [POST] /api/v1/hotel/updateRoom/:room
 module.exports.updateRoomInfo = async (req, res) => {
   try {
     const { hotelId } = req.params
@@ -424,64 +420,68 @@ module.exports.updateRoomInfo = async (req, res) => {
 
     const hotel = await Hotel.findOne({ HotelId: hotelId })
     if (!hotel) {
-      return res.json({
-        status: 404,
+      return res.status(404).json({
         message: 'Hotel not found.',
+        data: null,
       })
     }
+
     hotel.Images.push({ url: file.path })
     await hotel.save()
-    return res.json({
-      status: 200,
+
+    return res.status(200).json({
       message: 'Image uploaded successfully.',
       data: hotel,
     })
   } catch (error) {
     console.error('Error uploading image:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while uploading image.',
+    return res.status(500).json({
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
 
-//[PUT] /api/v1/hotel/create
+// [PUT] /api/v1/hotel/create
 module.exports.createHotel = async (req, res) => {
-  const genenrateRandomString = (length) => {
+  const generateRandomString = (length) => {
     let result = ''
-    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
     for (let i = 0; i < length; i++) {
-      result += characters.charAt(Math.floor(Math.random() * length))
+      result += characters.charAt(Math.floor(Math.random() * characters.length))
     }
     return result
   }
+
   try {
-    const { propertyType } = req.body
-    const propertyDetails = JSON.parse(req.body.propertyDetails)
-    const roomDetails = JSON.parse(req.body.rooms)
-    const { HotelName, Description, Tags, ParkingIncluded, LastRenovationDate, Address } = propertyDetails
-    const { image } = req.body
+    const { propertyType, propertyDetails, rooms, image } = req.body
+    const parsedPropertyDetails = JSON.parse(propertyDetails)
+    const parsedRoomDetails = JSON.parse(rooms)
+    const { HotelName, Description, Tags, ParkingIncluded, LastRenovationDate, Address } = parsedPropertyDetails
+
     const HotelTags = Tags.toString().includes(',') ? Tags.split(',') : [Tags]
-    const ID = genenrateRandomString(20)
+    const ID = generateRandomString(20)
+
     const newHotel = new Hotel({
       HotelId: ID,
-      HotelName: HotelName,
-      Description: Description,
+      HotelName,
+      Description,
       Category: propertyType,
       Tags: HotelTags,
       images: {
         imgSource: image,
       },
-      ParkingIncluded: ParkingIncluded,
+      ParkingIncluded,
       LastRenovationDate: new Date(LastRenovationDate),
-      Address: Address,
+      Address,
       Location: {
         type: 'Point',
         coordinates: [Address?.Longitude || 0, Address?.Latitude || 0],
       },
     })
-    const newRooms = roomDetails.map((room) => {
-      const roomID = genenrateRandomString(20)
+
+    const newRooms = parsedRoomDetails.map((room) => {
+      const roomID = generateRandomString(20)
       return new Room({
         RoomId: roomID,
         HotelId: ID,
@@ -500,71 +500,69 @@ module.exports.createHotel = async (req, res) => {
         },
       })
     })
-    await Room.insertMany(newRooms)
-    await newHotel.save()
-    return res.json({
-      status: 200,
+
+    await Promise.all([Room.insertMany(newRooms), newHotel.save()])
+
+    return res.status(200).json({
       message: 'Hotel created successfully.',
       data: newHotel,
     })
   } catch (error) {
     console.error('Error creating hotel:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while creating the hotel.',
+    return res.status(500).json({
+      message: 'Internal server error.',
+      data: null,
     })
   }
 }
 
-//[DELETE] /api/v1/hotel/:hotelId/room/:roomId/delete
+// [DELETE] /api/v1/hotel/:hotelId/room/:roomId/delete
 module.exports.deleteRoom = async (req, res) => {
   try {
     const { hotelId, roomId } = req.params
     const room = await Room.findOne({ RoomId: roomId })
     if (!room) {
-      return res.json({
-        status: 404,
+      return res.status(404).json({
         message: 'Room not found.',
       })
     }
     await Room.deleteOne({ RoomId: roomId })
-    return res.json({
-      status: 200,
+    return res.status(200).json({
       message: 'Room deleted successfully.',
     })
   } catch (error) {
     console.error('Error deleting room:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while deleting room.',
+    return res.status(500).json({
+      message: 'Internal server error.',
     })
   }
 }
 
-//[DELETE] /api/v1/hotel/:hotelId/delete
+// [DELETE] /api/v1/hotel/:hotelId/delete
 module.exports.deleteHotel = async (req, res) => {
   try {
     const { hotelId } = req.params
     const hotel = await Hotel.findOne({ HotelId: hotelId })
     if (!hotel) {
-      return res.json({
-        status: 404,
+      return res.status(404).json({
         message: 'Hotel not found.',
       })
     }
-    await Hotel.deleteOne({ HotelId })
-    await Room.deleteMany({ HotelId: hotelId })
-    await Review.deleteMany({ hotelId })
-    await Booking.deleteMany({ hotelId })
-    return res.json({
-      status: 200,
+
+    await Promise.all([
+      Hotel.deleteOne({ HotelId: hotelId }),
+      Room.deleteMany({ HotelId: hotelId }),
+      Review.deleteMany({ hotelId }),
+      Booking.deleteMany({ hotelId }),
+    ])
+
+    return res.status(200).json({
       message: 'Hotel deleted successfully.',
     })
   } catch (error) {
     console.error('Error deleting hotel:', error)
-    return res.json({
-      status: 500,
-      message: 'An error occurred while deleting hotel.',
+    return res.status(500).json({
+      message: 'Internal server error.',
     })
   }
 }

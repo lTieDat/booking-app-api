@@ -555,250 +555,250 @@ router.put('/superAdmin/account/:accountId', accountController.updateAccount)
  */
 router.delete('/superAdmin/account/:accountId', accountController.deleteAccount)
 
-/**
- * @swagger
- * /admin/superAdmin/displayedPosts:
- *   get:
- *     summary: Get the top 5 most visited cities' posts
- *     description: Fetches posts related to the top 5 cities with the most bookings.
- *     tags:
- *       - SuperAdmin
- *     responses:
- *       200:
- *         description: Displayed posts fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Displayed posts fetched successfully"
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "post_123"
- *                       title:
- *                         type: string
- *                         example: "Top tourist destinations"
- *                       content:
- *                         type: string
- *                         example: "Explore the best places to visit in the city."
- *                       keyword:
- *                         type: array
- *                         items:
- *                           type: string
- *                         example: ["New York", "Los Angeles", "Paris"]
- *       500:
- *         description: Failed to fetch displayed posts
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Get displayed posts failed"
- *                 status:
- *                   type: integer
- *                   example: 500
- */
-router.get('/superAdmin/displayPost', accountController.getDisplayedPosts)
+// /**
+//  * @swagger
+//  * /admin/superAdmin/displayedPosts:
+//  *   get:
+//  *     summary: Get the top 5 most visited cities' posts
+//  *     description: Fetches posts related to the top 5 cities with the most bookings.
+//  *     tags:
+//  *       - SuperAdmin
+//  *     responses:
+//  *       200:
+//  *         description: Displayed posts fetched successfully
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Displayed posts fetched successfully"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 200
+//  *                 data:
+//  *                   type: array
+//  *                   items:
+//  *                     type: object
+//  *                     properties:
+//  *                       _id:
+//  *                         type: string
+//  *                         example: "post_123"
+//  *                       title:
+//  *                         type: string
+//  *                         example: "Top tourist destinations"
+//  *                       content:
+//  *                         type: string
+//  *                         example: "Explore the best places to visit in the city."
+//  *                       keyword:
+//  *                         type: array
+//  *                         items:
+//  *                           type: string
+//  *                         example: ["New York", "Los Angeles", "Paris"]
+//  *       500:
+//  *         description: Failed to fetch displayed posts
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Get displayed posts failed"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 500
+//  */
+// router.get('/superAdmin/displayPost', accountController.getDisplayedPosts)
 
-/**
- * @swagger
- * /admin/superAdmin/displayedPlaces:
- *   get:
- *     summary: Get the top 5 most visited countries' posts
- *     description: Fetches posts related to the top 5 countries with the most bookings.
- *     tags:
- *       - SuperAdmin
- *     responses:
- *       200:
- *         description: Displayed places fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Displayed places fetched successfully"
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "post_123"
- *                       title:
- *                         type: string
- *                         example: "Top countries to visit"
- *                       content:
- *                         type: string
- *                         example: "Discover the best countries to visit for a vacation."
- *                       keyword:
- *                         type: array
- *                         items:
- *                           type: string
- *                         example: ["USA", "France", "Japan"]
- *       500:
- *         description: Failed to fetch displayed places
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Get displayed places failed"
- *                 status:
- *                   type: integer
- *                   example: 500
- */
-router.get('/superAdmin/displayPlace', accountController.getDisplayedPlaces)
+// /**
+//  * @swagger
+//  * /admin/superAdmin/displayedPlaces:
+//  *   get:
+//  *     summary: Get the top 5 most visited countries' posts
+//  *     description: Fetches posts related to the top 5 countries with the most bookings.
+//  *     tags:
+//  *       - SuperAdmin
+//  *     responses:
+//  *       200:
+//  *         description: Displayed places fetched successfully
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Displayed places fetched successfully"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 200
+//  *                 data:
+//  *                   type: array
+//  *                   items:
+//  *                     type: object
+//  *                     properties:
+//  *                       _id:
+//  *                         type: string
+//  *                         example: "post_123"
+//  *                       title:
+//  *                         type: string
+//  *                         example: "Top countries to visit"
+//  *                       content:
+//  *                         type: string
+//  *                         example: "Discover the best countries to visit for a vacation."
+//  *                       keyword:
+//  *                         type: array
+//  *                         items:
+//  *                           type: string
+//  *                         example: ["USA", "France", "Japan"]
+//  *       500:
+//  *         description: Failed to fetch displayed places
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Get displayed places failed"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 500
+//  */
+// router.get('/superAdmin/displayPlace', accountController.getDisplayedPlaces)
 
-/**
- * @swagger
- * /admin/superAdmin/displayedPostByID:
- *   get:
- *     summary: Get a specific post by ID
- *     description: Fetch a single post by its ID.
- *     tags:
- *       - SuperAdmin
- *     parameters:
- *       - in: query
- *         name: postId
- *         required: true
- *         description: The ID of the post to fetch.
- *         schema:
- *           type: string
- *           example: "post_123"
- *     responses:
- *       200:
- *         description: Post fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Post fetched successfully"
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                       example: "post_123"
- *                     title:
- *                       type: string
- *                       example: "Best hotels in New York"
- *                     content:
- *                       type: string
- *                       example: "Here are the top hotels in New York."
- *       400:
- *         description: Post not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Post not found"
- *                 status:
- *                   type: integer
- *                   example: 400
- *       500:
- *         description: Failed to fetch the post
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Get displayed post failed"
- *                 status:
- *                   type: integer
- *                   example: 500
- */
-router.get('/superAdmin/displayPost/:postId', accountController.getDisplayedPostByID)
+// /**
+//  * @swagger
+//  * /admin/superAdmin/displayedPostByID:
+//  *   get:
+//  *     summary: Get a specific post by ID
+//  *     description: Fetch a single post by its ID.
+//  *     tags:
+//  *       - SuperAdmin
+//  *     parameters:
+//  *       - in: query
+//  *         name: postId
+//  *         required: true
+//  *         description: The ID of the post to fetch.
+//  *         schema:
+//  *           type: string
+//  *           example: "post_123"
+//  *     responses:
+//  *       200:
+//  *         description: Post fetched successfully
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Post fetched successfully"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 200
+//  *                 data:
+//  *                   type: object
+//  *                   properties:
+//  *                     _id:
+//  *                       type: string
+//  *                       example: "post_123"
+//  *                     title:
+//  *                       type: string
+//  *                       example: "Best hotels in New York"
+//  *                     content:
+//  *                       type: string
+//  *                       example: "Here are the top hotels in New York."
+//  *       400:
+//  *         description: Post not found
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Post not found"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 400
+//  *       500:
+//  *         description: Failed to fetch the post
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Get displayed post failed"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 500
+//  */
+// router.get('/superAdmin/displayPost/:postId', accountController.getDisplayedPostByID)
 
-/**
- * @swagger
- * /admin/superAdmin/displayedHotels:
- *   get:
- *     summary: Get the top 5 most booked hotels
- *     description: Fetches the top 5 hotels with the most bookings.
- *     tags:
- *       - SuperAdmin
- *     responses:
- *       200:
- *         description: Displayed hotels fetched successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Displayed hotels fetched successfully"
- *                 status:
- *                   type: integer
- *                   example: 200
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       _id:
- *                         type: string
- *                         example: "hotel_123"
- *                       HotelName:
- *                         type: string
- *                         example: "Hotel Grand"
- *                       Address:
- *                         type: object
- *                         properties:
- *                           City:
- *                             type: string
- *                             example: "New York"
- *                           Country:
- *                             type: string
- *                             example: "USA"
- *                       Rating:
- *                         type: number
- *                         example: 4.5
- *       500:
- *         description: Failed to fetch displayed hotels
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Get displayed hotels failed"
- *                 status:
- *                   type: integer
- *                   example: 500
- */
-router.get('/superAdmin/displayHotel/:hotelId', accountController.getDisplayedHotels)
+// /**
+//  * @swagger
+//  * /admin/superAdmin/displayedHotels:
+//  *   get:
+//  *     summary: Get the top 5 most booked hotels
+//  *     description: Fetches the top 5 hotels with the most bookings.
+//  *     tags:
+//  *       - SuperAdmin
+//  *     responses:
+//  *       200:
+//  *         description: Displayed hotels fetched successfully
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Displayed hotels fetched successfully"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 200
+//  *                 data:
+//  *                   type: array
+//  *                   items:
+//  *                     type: object
+//  *                     properties:
+//  *                       _id:
+//  *                         type: string
+//  *                         example: "hotel_123"
+//  *                       HotelName:
+//  *                         type: string
+//  *                         example: "Hotel Grand"
+//  *                       Address:
+//  *                         type: object
+//  *                         properties:
+//  *                           City:
+//  *                             type: string
+//  *                             example: "New York"
+//  *                           Country:
+//  *                             type: string
+//  *                             example: "USA"
+//  *                       Rating:
+//  *                         type: number
+//  *                         example: 4.5
+//  *       500:
+//  *         description: Failed to fetch displayed hotels
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Get displayed hotels failed"
+//  *                 status:
+//  *                   type: integer
+//  *                   example: 500
+//  */
+// router.get('/superAdmin/displayHotel/:hotelId', accountController.getDisplayedHotels)
 
 module.exports = router
