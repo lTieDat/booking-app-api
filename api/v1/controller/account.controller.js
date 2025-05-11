@@ -99,7 +99,6 @@ module.exports.adminLogin = async (req, res) => {
     res.json({ // VuNA - accountController.test - AL1.3
       message: 'Login successful',
       status: 200,
-      token,
       data: account,
     })
   } catch (error) {
