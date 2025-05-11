@@ -296,7 +296,7 @@ describe('User Controller APIs', () => {
         password: md5('password123'),
         token: 'valid-token',
         verificationToken: '123456',
-        isVerified: false,
+        verified: false,
         verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       })
 
@@ -317,7 +317,7 @@ describe('User Controller APIs', () => {
 
       const updatedUser = await User.findOne({ email: 'test@example.com' })
       expect(updatedUser.toObject()).toMatchObject({
-        isVerified: true,
+        verified: true,
         verificationToken: null,
         verificationTokenExpiresAt: null,
         token: 'valid-token',
@@ -380,7 +380,7 @@ describe('User Controller APIs', () => {
         password: md5('password123'),
         token: 'valid-token',
         verificationToken: '123456',
-        isVerified: false,
+        verified: false,
         verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       })
 
@@ -398,7 +398,7 @@ describe('User Controller APIs', () => {
 
       const unchangedUser = await User.findOne({ email: 'test@example.com' })
       expect(unchangedUser.toObject()).toMatchObject({
-        isVerified: false,
+        verified: false,
         verificationToken: '123456',
       })
     })
@@ -417,7 +417,7 @@ describe('User Controller APIs', () => {
         password: md5('password123'),
         token: null,
         verificationToken: '123456',
-        isVerified: false,
+        verified: false,
         verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       })
 
@@ -433,7 +433,7 @@ describe('User Controller APIs', () => {
 
       const unchangedUser = await User.findOne({ email: 'test@example.com' })
       expect(unchangedUser.toObject()).toMatchObject({
-        isVerified: false,
+        verified: false,
         verificationToken: '123456',
       })
     })
@@ -475,7 +475,7 @@ describe('User Controller APIs', () => {
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        isVerified: true,
+        verified: true,
         token: 'valid-token',
       })
 
@@ -516,14 +516,14 @@ describe('User Controller APIs', () => {
       // Purpose: Test login with unverified account
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 403, { message: { message: "Account not verified" } }
-      // Nhánh xử lý: Nhánh 2 - Kiểm tra tài khoản đã xác minh (`if (!user.isVerified)`)
+      // Nhánh xử lý: Nhánh 2 - Kiểm tra tài khoản đã xác minh (`if (!user.verified)`)
       // Test case xử lý nhánh này: Test Case 2.3
 
       await User.create({
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        isVerified: false,
+        verified: false,
         token: 'valid-token',
       })
 
@@ -550,7 +550,7 @@ describe('User Controller APIs', () => {
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        isVerified: true,
+        verified: true,
         token: null,
       })
 
@@ -613,7 +613,7 @@ describe('User Controller APIs', () => {
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        isVerified: true,
+        verified: true,
         token: 'valid-token',
       })
 
@@ -640,7 +640,7 @@ describe('User Controller APIs', () => {
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
-        isVerified: true,
+        verified: true,
         token: 'valid-token',
       })
 
