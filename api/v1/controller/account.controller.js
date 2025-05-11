@@ -15,6 +15,8 @@ module.exports.getDashboardData = async (req, res) => {
   try {
     const token = req.params.adminId
     const manager = await Account.findOne({ token })
+    console.log('Manager:', manager)
+    console.log('Token:', token)
 
     if (!manager) {
       return res.status(404).json({ error: 'Manager not found' })
