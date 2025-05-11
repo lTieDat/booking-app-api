@@ -8,11 +8,12 @@ const Account = require('../../../models/account.model')
 
 const handleError = (res, error, message = 'fail', status = 500) => {
   console.error(error)
-  res.status(status).json({message })
+  res.status(status).json({ message })
 }
 
 const handleResponse = (res, status, message, data = {}) => {
-  return res.status(status).json({message, ...data })
+  // Ensure consistent response format with nested message object
+  return res.status(status).json({ message: { message }, ...data })
 }
 
 // [POST] /api/v1/users/register
@@ -64,7 +65,7 @@ module.exports.register = async (req, res) => {
       userName,
       phone: '',
       address: '',
-      dateOfBirth: '',
+      dateOfBirth: null,
     })
 
     await user.save()
@@ -77,7 +78,8 @@ module.exports.register = async (req, res) => {
                     <h2>${verificationToken}</h2>`
     await mailHelper.sendMail(email, subject, html)
 
-    return handleResponse(res, 200, 'Registration successful. Please check your email to verify your account.', {
+    // Return 201 for resource creation
+    return handleResponse(res, 201, 'Registration successful. Please check your email to verify your account.', {
       token,
     })
   } catch (error) {
@@ -91,29 +93,48 @@ module.exports.verifyEmail = async (req, res) => {
   try {
     const { otp, email } = req.body
 
+    // Validate inputs
+    if (!otp || !email) {
+      return handleResponse(res, 400, 'OTP and email are required')
+    }
+
     // Find user by verification token
     // Test case : DatLT -  VerifyEmail_InvalidToken_Fail (EV3.1), VerifyEmail_MissingEmail_Fail (EV3.3), VerifyEmail_MissingOTP_Fail (EV3.4)
     const user = await User.findOne({
       verificationToken: otp,
-      email: email,
-      verified: false,
+      email,
+      isVerified: false,
+      verificationTokenExpiresAt: { $gt: new Date() },
     })
     if (!user) {
       return handleResponse(res, 400, 'Invalid or expired token')
     }
 
+    // Ensure token exists
+    // Test case : DatLT -  VerifyEmail_MissingToken_Error (EV3.6)
+    if (!user.token) {
+      return handleResponse(res, 500, 'User authentication token not found')
+    }
+
     // Mark user as verified
-    user.verified = true
+    user.isVerified = true
     user.verificationToken = null
     user.verificationTokenExpiresAt = null
     const token = user.token
-    await user.save()
+
+    // Save user changes
+    try {
+      await user.save()
+    } catch (saveError) {
+      // Test case : DatLT -  VerifyEmail_DBSaveError_Error (EV3.5)
+      return handleError(res, saveError, 'Failed to save user verification', 500)
+    }
 
     // Test case : DatLT -  VerifyEmail_Success_Success (EV3.2) - Main logic path
     return handleResponse(res, 200, 'Email verified successfully. You can now log in.', { token })
   } catch (error) {
-    // Test case : DatLT -  VerifyEmail_DBSaveError_Error (EV3.5)
-    handleError(res, error)
+    // Test case : DatLT -  VerifyEmail_UnexpectedError_Error (EV3.7)
+    handleError(res, error, 'Verification failed')
   }
 }
 
@@ -121,6 +142,11 @@ module.exports.verifyEmail = async (req, res) => {
 module.exports.login = async (req, res) => {
   try {
     const { email, password } = req.body
+
+    // Validate inputs
+    if (!email || !password) {
+      return handleResponse(res, 400, 'Email and password are required')
+    }
 
     // Find user by email
     // Test case : DatLT -  UserLogin_EmailNotFound_Fail (UL2.2), UserLogin_MissingEmail_Fail (UL2.5)
@@ -131,7 +157,7 @@ module.exports.login = async (req, res) => {
 
     // Check if the account is verified
     // Test case : DatLT -  UserLogin_NotVerified_Fail (UL2.3)
-    if (!user.verified) {
+    if (!user.isVerified) {
       return handleResponse(res, 403, 'Account not verified')
     }
 
@@ -151,10 +177,10 @@ module.exports.login = async (req, res) => {
     // Test case : DatLT -  UserLogin_Success_Success (UL2.1), UserLogin_CookieFail_Success (UL2.8) - Main logic path
     res.cookie('token', user.token, { httpOnly: true, secure: true })
 
-    return handleResponse(res, 200, 'Login successful', { data: user })
+    return handleResponse(res, 200, 'Login successful', { token: user.token, data: user })
   } catch (error) {
     console.error('Login error:', error)
-    return res.status(500).json({ message: 'Login failed', error: error.message })
+    return handleError(res, error, 'Login failed')
   }
 }
 
@@ -162,6 +188,11 @@ module.exports.login = async (req, res) => {
 module.exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body
+
+    // Validate input
+    if (!email) {
+      return handleResponse(res, 400, 'Email is required')
+    }
 
     // Find user by email
     // Test case : DatLT -  ForgotPassword_EmailNotFound_Fail (FP4.2)
@@ -245,6 +276,10 @@ module.exports.prefix = async (req, res) => {
 module.exports.me = async (req, res) => {
   try {
     const userToken = req.query.tokenID
+    if (!userToken) {
+      return handleResponse(res, 400, 'Token is required')
+    }
+
     const user = await User.findOne({
       token: userToken,
     }).select('fullName email phone address dateOfBirth userName')
@@ -288,7 +323,7 @@ module.exports.update = async (req, res) => {
 
     // Validate dateOfBirth format if provided
     // Test case : DatLT -  UpdateUserProfile_InvalidDOB_Fail (UPD8.2)
-    if (dateOfBirth !== undefined) {
+    if (dateOfBirth !== undefined && dateOfBirth !== null) {
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/
       if (!dateRegex.test(dateOfBirth) || isNaN(new Date(dateOfBirth).getTime())) {
         return handleResponse(res, 400, 'Invalid date of birth format')
@@ -303,20 +338,16 @@ module.exports.update = async (req, res) => {
       }
     })
 
-    try {
-      await user.save()
-    } catch (error) {
-      // Test case : DatLT -  UpdateUserProfile_DBError_Error (UPD8.7)
-      return handleError(res, error)
-    }
+    await user.save()
 
     // Test cases: UpdateUserProfile_UpdateAll_Success (UPD8.1), UpdateUserProfile_DuplicateEmail_Success (UPD8.3),
     // UpdateUserProfile_SameData_Success (UPD8.6), UpdateUserProfile_UpdateEmail_Success (UPD8.8),
     // UpdateUserProfile_UpdateUserName_Success (UPD8.9), UpdateUserProfile_UpdateDOB_Success (UPD8.10),
     // UpdateUserProfile_UpdateAddress_Success (UPD8.11), UpdateUserProfile_UpdateFullName_Success (UPD8.12),
     // UpdateUserProfile_UpdatePhone_Success (UPD8.14) - Main logic path
-    return handleResponse(res, 200, 'Update successful')
+    return handleResponse(res, 200, 'Update successful', { status: 200 })
   } catch (error) {
-    return handleError(res, error)
+    // Test case : DatLT -  UpdateUserProfile_DBError_Error (UPD8.7)
+    handleError(res, error)
   }
 }
