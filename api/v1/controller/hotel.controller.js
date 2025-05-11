@@ -191,9 +191,9 @@ module.exports.getHotelRooms = async (req, res) => {
 
 // [POST] /api/v1/hotel/:hotelId/review/:userId
 module.exports.addReview = async (req, res) => {
-  try {
-    const { hotelId, userId } = req.params
-    const { reviewText, rating, bookingId } = req.body
+  try { // VuNA - bookingController.test - AR7.4
+    const { hotelId, userId } = req.params;
+    const { reviewText, rating, bookingId } = req.body;
 
     // Fetch the existing review and hotel in parallel
     const [existingReview, hotel] = await Promise.all([
@@ -202,7 +202,7 @@ module.exports.addReview = async (req, res) => {
     ])
 
     // If the hotel is not found, return an error response
-    if (!hotel) {
+    if (!hotel) { // VuNA - bookingController.test - AR7.1
       return res.status(404).json({
         message: 'Hotel not found.',
         data: null,
@@ -212,7 +212,7 @@ module.exports.addReview = async (req, res) => {
     let responseMessage
     let savedReview
 
-    if (existingReview) {
+    if (existingReview) { // VuNA - bookingController.test - AR7.2
       // Update existing review
       existingReview.reviewText = reviewText
       existingReview.rating = rating
@@ -226,9 +226,9 @@ module.exports.addReview = async (req, res) => {
         reviewText,
         rating,
         bookingId,
-      })
-      savedReview = await newReview.save()
-      responseMessage = 'Review added successfully.'
+      });
+      savedReview = await newReview.save();
+      responseMessage = 'Review added successfully.'; // VuNA - bookingController.test - AR7.3
     }
 
     // Calculate and update the hotel rating
@@ -253,11 +253,11 @@ module.exports.addReview = async (req, res) => {
 
 // [GET] /api/v1/hotel/:hotelId/reviews
 module.exports.getReviews = async (req, res) => {
-  try {
-    const { hotelId } = req.params
-    const reviews = await Review.find({ hotelId })
+  try { // VuNA - bookingController.test - GR8.2
+    const { hotelId } = req.params;
+    const reviews = await Review.find({ hotelId });
     return res.status(200).json({
-      message: 'Reviews found.',
+      message: 'Reviews found.', // VuNA - bookingController.test - GR8.1
       data: reviews,
     })
   } catch (error) {

@@ -84,18 +84,19 @@ module.exports.getDashboardData = async (req, res) => {
 
 //[POST] /admin/login
 module.exports.adminLogin = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - AL1.4
     const { email, password } = req.body
     const account = await Account.findOne({ email })
-    if (!account) {
+    if (!account) { // VuNA - accountController.test - AL1.1
       return res.json({ message: 'Email not found', status: 400 })
     }
-    if (account.password !== md5(password)) {
+    console.log(md5(password))
+    if (account.password !== md5(password)) { // VuNA - accountController.test - AL1.2
       return res.json({ message: 'Incorrect password', status: 400 })
     }
     const token = account.token
 
-    res.json({
+    res.json({ // VuNA - accountController.test - AL1.3
       message: 'Login successful',
       status: 200,
       data: account,
@@ -107,14 +108,14 @@ module.exports.adminLogin = async (req, res) => {
 
 //[GET] /api/v1/admin/me
 module.exports.adminMe = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - AM2.3
     const token = req.query.tokenID
     const account = await Account.findOne({ token })
 
-    if (!account) {
+    if (!account) { // VuNA - accountController.test - AM2.1
       return res.json({ message: 'Account not found', status: 400 })
     }
-    return res.json({ message: 'Account details', status: 200, data: account })
+    return res.json({ message: 'Account details', status: 200, data: account }) // VuNA - accountController.test - AM2.2
   } catch (error) {
     res.json({ message: 'Get account failed', status: 500 })
   }
@@ -122,9 +123,9 @@ module.exports.adminMe = async (req, res) => {
 
 //[GET] /api/v1/admin/superAdmin/accounts
 module.exports.getAccounts = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - GA5.2
     const accounts = await Account.find()
-    res.json({ message: 'Accounts fetched successfully', status: 200, data: accounts })
+    res.json({ message: 'Accounts fetched successfully', status: 200, data: accounts }) // VuNA - accountController.test - GA5.1
   } catch (error) {
     res.json({ message: 'Get accounts failed', status: 500 })
   }
@@ -132,7 +133,7 @@ module.exports.getAccounts = async (req, res) => {
 
 //[POST] /admin/superAdmin/account
 module.exports.createAccount = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - CA6.2
     const { email, password, role } = req.body
     const token = generateRandomString(20)
     const newAccount = new Account({
@@ -142,7 +143,7 @@ module.exports.createAccount = async (req, res) => {
       token,
     })
     await newAccount.save()
-    res.json({ message: 'Account created successfully', status: 200, data: newAccount })
+    res.json({ message: 'Account created successfully', status: 200, data: newAccount }) // VuNA - accountController.test - CA6.1
   } catch (error) {
     console.error('Error creating account:', error)
     res.json({ message: 'Create account failed', status: 500 })
@@ -151,18 +152,18 @@ module.exports.createAccount = async (req, res) => {
 
 //[PUT] /api/v1/admin/superAdmin/account/:accountId
 module.exports.updateAccount = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - UA3.3
     const accountId = req.params.accountId
     const { email, password, role } = req.body
     const account = await Account.findById(accountId)
-    if (!account) {
+    if (!account) { // VuNA - accountController.test - UA3.1
       return res.json({ message: 'Account not found', status: 400 })
     }
     account.email = email
     account.password = md5(password)
     account.role = role
     await account.save()
-    res.json({ message: 'Account updated successfully', status: 200, data: account })
+    res.json({ message: 'Account updated successfully', status: 200, data: account }) // VuNA - accountController.test - UA3.2
   } catch (error) {
     res.json({ message: 'Update account failed', status: 500 })
   }
@@ -170,14 +171,14 @@ module.exports.updateAccount = async (req, res) => {
 
 //[DELETE] /api/v1/admin/superAdmin/account/:accountId
 module.exports.deleteAccount = async (req, res) => {
-  try {
+  try { // VuNA - accountController.test - DA4.3
     const accountId = req.params.accountId
     const account = await Account.findById(accountId)
-    if (!account) {
+    if (!account) { // VuNA - accountController.test - DA4.1
       return res.json({ message: 'Account not found', status: 400 })
     }
     await account.deleteOne()
-    res.json({ message: 'Account deleted successfully', status: 200 })
+    res.json({ message: 'Account deleted successfully', status: 200 }) // VuNA - accountController.test - DA4.2
   } catch (error) {
     res.json({ message: 'Delete account failed', status: 500 })
   }

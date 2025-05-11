@@ -275,7 +275,7 @@ describe('Delete Admin Account API', () => {
 // Checking Fetch all accounts from the database (account.controller.getAccounts() function)
 describe('Get All Accounts API', () => {
   beforeEach(async () => {
-    // await Account.deleteMany()
+    await Account.deleteMany()
 
     await Account.create([
       {
@@ -326,7 +326,7 @@ describe('Get All Accounts API', () => {
 // Checking Create a new account (account.controller.createAccount() function)
 describe('Create Account API', () => {
   beforeEach(async () => {
-    // await Account.deleteMany()
+    await Account.deleteMany()
   })
 
   // CA6.1 - Successful account creation
