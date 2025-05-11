@@ -1,12 +1,38 @@
 const express = require('express')
 const router = express.Router()
-const multer = require('multer')
-const upload = multer()
+const multer = require('multer');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single('file');
+
+const uploadMultiple = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'images', maxCount: 10 },
+]);
+
+module.exports = uploadMultiple;
+module.exports = upload;
 const uploadToCloudinary = require('../middlewares/uploadCloud.middlewares.js')
 const hotelController = require('../controller/hotel.controller.js')
-const enhanceUpload = multer({
-  limits: { fileSize: 50 * 1024 * 1024 },
-}).array('images')
+
 
 /**
  * @swagger
@@ -544,7 +570,7 @@ router.get('/:hotelId/statistics', hotelController.getHotelStatistics)
  *                   type: string
  *                   example: "An error occurred while updating hotel information."
  */
-router.post(`/updateInfo?`, upload.single('image'), uploadToCloudinary.upload, hotelController.updateHotelInfo)
+router.post(`/updateInfo?`, upload, uploadToCloudinary.upload, hotelController.updateHotelInfo)
 
 /**
  * @swagger
@@ -621,8 +647,12 @@ router.post(`/updateInfo?`, upload.single('image'), uploadToCloudinary.upload, h
  *                   type: string
  *                   example: "An error occurred while uploading image."
  */
-router.post('/updateRoom/:room', upload.single('image'), uploadToCloudinary.upload, hotelController.updateRoomInfo)
-
+router.post(
+  '/updateRoom/:roomId',
+  upload,
+  uploadToCloudinary.upload,
+  hotelController.updateRoomInfo
+);
 /**
  * @swagger
  * /hotel/create:
@@ -713,7 +743,7 @@ router.post('/updateRoom/:room', upload.single('image'), uploadToCloudinary.uplo
  *                   type: string
  *                   example: "An error occurred while creating the hotel."
  */
-router.post('/create', upload.single('image'), uploadToCloudinary.upload, hotelController.createHotel)
+router.post('/create', upload, uploadToCloudinary.upload, hotelController.createHotel)
 
 /**
  * @swagger

@@ -5,10 +5,12 @@ const Booking = require('../../../models/booking.model')
 
 // [GET] /api/v1/hotel/search
 module.exports.search = async (req, res) => {
+  // Covered in test case 1.6 in hotelController.test.js
   try {
     const { city, country, lat, lng, startDate, endDate, adults, children, rooms, roomTags } = req.query
 
     // Check if country is provided
+    // Cover in test case 1.1 in hotelController.test.js
     if (!country) {
       return res.status(400).json({
         message: 'Country is required.',
@@ -16,7 +18,8 @@ module.exports.search = async (req, res) => {
       })
     }
 
-    const searchQuery = {}
+    const searchQuery = {};
+    // Cover in test case 1.2 and 1.3 in hotelController.test.js
     if (city && city !== 'undefined') {
       searchQuery['Address.City'] = city
     }
@@ -52,9 +55,10 @@ module.exports.search = async (req, res) => {
     console.log('Room filter:', roomFilter)
 
     // Add roomTags to filter if they exist
-    if (roomTags && roomTags !== 'undefined') {
-      const roomTagsArray = roomTags.split(',')
-      roomFilter.RoomTags = { $in: roomTagsArray }
+    // Cover in test case 1.7 in hotelController.test.js
+    if (roomTags) {
+      const roomTagsArray = roomTags.split(',');
+      roomFilter.RoomTags = { $in: roomTagsArray };
     }
 
     // const roomInfos = await Room.find(roomFilter)
@@ -64,8 +68,9 @@ module.exports.search = async (req, res) => {
     // Filter out hotels with no available rooms and get the lowest and highest price for each hotel
     const returnHotels = hotels
       .map((hotel) => {
-        const hotelRooms = roomInfos.filter((room) => room.HotelId === hotel.HotelId)
-        const numberOfRooms = hotelRooms.length
+        const hotelRooms = roomInfos.filter((room) => room.HotelId === hotel.HotelId);
+        const numberOfRooms = hotelRooms.length;
+        // Covered in test case 1.5 in hotelController.test.js
         if (numberOfRooms >= requiredRooms) {
           // Get the lowest and highest prices from the hotel's rooms
           const prices = hotelRooms.map((room) => room.BaseRate)
@@ -74,9 +79,9 @@ module.exports.search = async (req, res) => {
 
           const roomTags = hotelRooms.map((room) => room.RoomTags).flat()
 
-          if (roomTags.length === 0) {
-            return null // Skip hotels with no matching room tags
-          }
+          // Cover in test case 1.4 in hotelController.test.js
+          if (roomTags.length === 0) { return null;}
+
           return {
             ...hotel.toObject(),
             NumberOfRooms: numberOfRooms,
@@ -91,6 +96,7 @@ module.exports.search = async (req, res) => {
 
     console.log('Filtered hotels:', returnHotels)
 
+    // Covered in test case 1.2 in hotelController.test.js
     if (returnHotels.length === 0) {
       return res.status(404).json({
         message: 'No hotels found with available rooms for the specified criteria.',
@@ -114,11 +120,13 @@ module.exports.search = async (req, res) => {
 
 // [GET] /api/v1/hotel/:hotelId
 module.exports.getHotelById = async (req, res) => {
+  // Covered in test case 2.4 in hotelController.test.js
   try {
     const { hotelId } = req.params
     const { startDate, endDate, adults, children, rooms } = req.query
 
-    const hotel = await Hotel.findOne({ HotelId: hotelId })
+    const hotel = await Hotel.findOne({ HotelId: hotelId });
+    // Covered in test case 2.1 in hotelController.test.js
     if (!hotel) {
       return res.status(404).json({
         message: 'Hotel not found.',
@@ -135,10 +143,11 @@ module.exports.getHotelById = async (req, res) => {
     const totalGuests = adultsCount + childrenCount
     const roomsCount = parseInt(rooms, 10) || 1
 
-    const maxGuestsPerRoom = 4
-    let requiredRooms = Math.ceil(totalGuests / maxGuestsPerRoom) || 0
-    requiredRooms = Math.max(requiredRooms, roomsCount)
+    const maxGuestsPerRoom = 4;
+    let requiredRooms = Math.ceil(totalGuests / maxGuestsPerRoom) || 0;
+    requiredRooms = Math.max(requiredRooms, roomsCount);
 
+    // Covered in test case 2.2 or 2.3 in hotelController.test.js
     const roomFilter = {
       HotelId: hotelId,
       NumberAvailable: { $gte: requiredRooms },
@@ -167,9 +176,11 @@ module.exports.getHotelById = async (req, res) => {
 
 // [GET] /api/v1/hotel/:roomId
 module.exports.getHotelRooms = async (req, res) => {
+  // Covered in test case 7.3 in hotelController.test.js
   try {
-    const { roomId } = req.params
-    const room = await Room.findOne({ RoomId: roomId })
+    const { roomId } = req.params;
+    const room = await Room.findOne({ RoomId: roomId });
+    // Covered in test case 7.1 or 7.2 in hotelController.test.js
     if (!room) {
       return res.status(404).json({
         message: 'Room not found.',
@@ -271,6 +282,7 @@ module.exports.getReviews = async (req, res) => {
 
 // [GET] /api/v1/hotel/:hotelId/statistics
 module.exports.getHotelStatistics = async (req, res) => {
+  // Covered in test case 3.9 in hotelController.test.js
   try {
     const { hotelId } = req.params
 
@@ -283,6 +295,7 @@ module.exports.getHotelStatistics = async (req, res) => {
     ])
 
     // If the hotel is not found, return an error response
+    // Covered in test case 3.1 in hotelController.test.js
     if (!hotel) {
       return res.status(404).json({
         message: 'Hotel not found.',
@@ -291,10 +304,11 @@ module.exports.getHotelStatistics = async (req, res) => {
     }
 
     // Calculate total rooms, reviews, ratings, and bookings
-    const totalRooms = rooms.reduce((sum, room) => sum + room.MaxQuantity, 0)
-    const totalReviews = reviews.length
-    const totalRating = hotel.Rating || 0
-    const totalBookings = bookings.length
+    // Covered in test case 3.2 or 3.3 in hotelController.test.js
+    const totalRooms = rooms.reduce((sum, room) => sum + room.MaxQuantity, 0);
+    const totalReviews = reviews.length;
+    const totalRating = hotel.Rating || 0;
+    const totalBookings = bookings.length;
 
     // Calculate total revenue
     const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0)
@@ -365,6 +379,7 @@ module.exports.getHotelStatistics = async (req, res) => {
 
 // [POST] /api/v1/hotel/updateInfo/:hotel
 module.exports.updateHotelInfo = async (req, res) => {
+  // Covered in test case 4.4 or 4.6 in hotelController.test.js
   try {
     const hotelId = req.query.hotelID
     const { hotelData, image } = req.body
@@ -373,7 +388,8 @@ module.exports.updateHotelInfo = async (req, res) => {
     const parsedHotelData = JSON.parse(hotelData)
 
     // Find the hotel by HotelId
-    const hotel = await Hotel.findOne({ HotelId: hotelId })
+    const hotel = await Hotel.findOne({ HotelId: hotelId });
+    // Covered in test case 4.3 in hotelController.test.js
     if (!hotel) {
       return res.status(404).json({
         message: 'Hotel not found.',
@@ -392,6 +408,7 @@ module.exports.updateHotelInfo = async (req, res) => {
     hotel.Address = parsedHotelData.Address
 
     // Handle image upload if a new image is provided
+    // Covered in test case 4.1 or 4.2 in hotelController.test.js
     if (image) {
       hotel.images.imgSource = image
     }
@@ -412,33 +429,37 @@ module.exports.updateHotelInfo = async (req, res) => {
   }
 }
 
-// [POST] /api/v1/hotel/updateRoom/:room
+// [POST] /api/v1/hotel/updateRoom/:roomId
 module.exports.updateRoomInfo = async (req, res) => {
+  // Covered in test case 8.3 in hotelController.test.js
   try {
-    const { hotelId } = req.params
-    const { file } = req
+    const { roomId } = req.params; // Correctly extract roomId
+    const imageUrl = req.body.file; // Use image, not file
 
-    const hotel = await Hotel.findOne({ HotelId: hotelId })
-    if (!hotel) {
+    // Validate roomId
+    console.log('Room ID:', roomId);
+    if (!roomId) { return res.status(400).json({ message: 'Room ID is required.', data: null });}
+
+    // Find the hotel and update the room's images
+    // Covered in test case 8.2 in hotelController.test.js
+    const room = await Room.findOne({ RoomId: roomId });
+    if (!room) {
       return res.status(404).json({
-        message: 'Hotel not found.',
+        message: 'Room not found.',
         data: null,
       })
     }
 
-    hotel.Images.push({ url: file.path })
-    await hotel.save()
-
+    room.Images.url = imageUrl;
+    await room.save();
     return res.status(200).json({
-      message: 'Image uploaded successfully.',
-      data: hotel,
-    })
+      message: 'Room updated successfully.',
+      data: room,
+    });
+
   } catch (error) {
-    console.error('Error uploading image:', error)
-    return res.status(500).json({
-      message: 'Internal server error.',
-      data: null,
-    })
+    console.error('Error uploading image:', error);
+    return res.status(500).json({ message: 'Internal server error.', data: null });
   }
 }
 
@@ -454,13 +475,17 @@ module.exports.createHotel = async (req, res) => {
   }
 
   try {
-    const { propertyType, propertyDetails, rooms, image } = req.body
-    const parsedPropertyDetails = JSON.parse(propertyDetails)
-    const parsedRoomDetails = JSON.parse(rooms)
-    const { HotelName, Description, Tags, ParkingIncluded, LastRenovationDate, Address } = parsedPropertyDetails
+    const { propertyType, propertyDetails, rooms, image } = req.body;
+    // Covered in test case 5.1 or 5.4 in hotelController.test.js
+    const parsedPropertyDetails = JSON.parse(propertyDetails);
+    const parsedRoomDetails = JSON.parse(rooms);
+    const { HotelName, Description, Tags, ParkingIncluded, LastRenovationDate, Address } =
+      parsedPropertyDetails;
 
-    const HotelTags = Tags.toString().includes(',') ? Tags.split(',') : [Tags]
-    const ID = generateRandomString(20)
+    // Covered in test case 5.1 or 5.2 or 5.3 in hotelController.test.js
+    const HotelTags = Tags.toString().includes(',') ? Tags.split(',') : [Tags];
+    console.log('Hotel Tags:', HotelTags);
+    const ID = generateRandomString(20);
 
     const newHotel = new Hotel({
       HotelId: ID,
@@ -476,6 +501,7 @@ module.exports.createHotel = async (req, res) => {
       Address,
       Location: {
         type: 'Point',
+        // Covered in test case 5.7 in hotelController.test.js
         coordinates: [Address?.Longitude || 0, Address?.Latitude || 0],
       },
     })
@@ -518,9 +544,11 @@ module.exports.createHotel = async (req, res) => {
 
 // [DELETE] /api/v1/hotel/:hotelId/room/:roomId/delete
 module.exports.deleteRoom = async (req, res) => {
+  // 9.3
   try {
     const { hotelId, roomId } = req.params
     const room = await Room.findOne({ RoomId: roomId })
+    // Covered in test case 9.2 or 9.1 in hotelController.test.js
     if (!room) {
       return res.status(404).json({
         message: 'Room not found.',
@@ -540,9 +568,11 @@ module.exports.deleteRoom = async (req, res) => {
 
 // [DELETE] /api/v1/hotel/:hotelId/delete
 module.exports.deleteHotel = async (req, res) => {
+  // 6.3
   try {
     const { hotelId } = req.params
     const hotel = await Hotel.findOne({ HotelId: hotelId })
+    // Covered in test case 6.1 or 6.2 in hotelController.test.js
     if (!hotel) {
       return res.status(404).json({
         message: 'Hotel not found.',

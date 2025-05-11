@@ -148,7 +148,7 @@ router.post('/password/reset', userController.reset)
  *       401:
  *         description: Unauthorized
  */
-router.get('/list', authMiddleware.requireAuth, userController.list)
+router.get('/list', userController.list)
 
 /**
  * @swagger

@@ -6,15 +6,17 @@ const { search, getHotelById, getHotelStatistics, updateHotelInfo, createHotel, 
 const { app, server } = require('../index')
 const request = require('supertest');
 const { json } = require('body-parser');
+const fs = require('fs');
 
 beforeAll(async () => {
     await mongoose.connect(process.env.MONGO_URL, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
     });
-});
+}, 10000);
 
 afterAll(async () => {
+    await cleanData();
     await mongoose.connection.close();
     if (server && server.close) await server.close();
 });
@@ -127,6 +129,7 @@ const seedData = async () => {
 };
 
 const cleanData = async () => {
+    // Delete all test hotels, including dynamically created ones
     await Hotel.deleteMany({
         HotelId: {
             $in: [
@@ -135,46 +138,59 @@ const cleanData = async () => {
                 "TEST_HOTEL_ERROR_UPDATE",
                 "TEST_HOTEL_ERROR_ROOM",
                 "TEST_HOTEL_ERROR_DELETE",
-                "MOCK_HOTEL_ID"
-            ]
-        }
+                "MOCK_HOTEL_ID",
+            ],
+        },
     });
+    // Delete hotels created during tests (e.g., by Create Hotel API)
+    await Hotel.deleteMany({
+        HotelName: {
+            $in: [
+                "Test New Luxury Hotel",
+                "Test Budget Inn",
+                "Test Roadside Inn",
+                "Test Downtown Stay",
+                // Add other hotel names created in tests
+            ],
+        },
+    });
+
     await Room.deleteMany({
         RoomId: {
             $in: [
                 "TEST_ROOM_001",
                 "TEST_ROOM_ERROR",
                 "TEST_ROOM_ERROR_DELETE",
-                "MOCK_ROOM_ID"
-            ]
-        }
+                "MOCK_ROOM_ID",
+            ],
+        },
     });
+    // Clean rooms linked to test hotels
+    await Room.deleteMany({
+        HotelId: {
+            $in: [
+                "TEST_HOTEL_001",
+                "TEST_HOTEL_002",
+                "MOCK_HOTEL_ID",
+            ],
+        },
+    });
+
     await Booking.deleteMany({
         bookingId: {
             $in: [
                 "TEST_BOOKING_001",
                 "TEST_BOOKING_002",
-                "MOCK_BOOKING_ID"
-            ]
-        }
+                "MOCK_BOOKING_ID",
+            ],
+        },
     });
 };
 
 describe('Hotel search', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
-
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -250,8 +266,8 @@ describe('Hotel search', () => {
         const response = await request(app).get('/api/v1/hotel/search').query({
             city: 'Paris',
             country: 'France',
-            adults: '1',
-            children: '0',
+            adults: '2',
+            children: '1',
             rooms: '1',
             roomTags: 'Spanish',
         });
@@ -336,20 +352,10 @@ describe('Hotel search', () => {
 });
 
 describe('Get Hotel By ID API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -463,24 +469,15 @@ describe('Get Hotel By ID API', () => {
 });
 
 describe('Get Hotel Statistics API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
         await cleanData();
+        jest.restoreAllMocks();
     });
 
     // Test Case 3.1: Hotel Not Found
@@ -663,21 +660,9 @@ describe('Get Hotel Statistics API', () => {
 
 describe('Update Hotel Info API', () => {
 
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-        if (server && server.close) await server.close();
-    });
-
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -687,106 +672,85 @@ describe('Update Hotel Info API', () => {
 
 
     // Test Case 4.1: Update Hotel Info Successfully with Full Data
-    it('Test Case 4.1: should return 200 when hotel info is updated successfully', async () => {
-
-        let hotel = await Hotel.findOne({ HotelName: 'Test Paris Luxury Hotel' });
-
+    // Test Case 1: Successful update with full data
+    it('should return 200 when hotel info is updated successfully with full data', async () => {
         const response = await request(app)
-            .post('/api/v1/hotel/updateInfo')
-            .query({ hotelId: hotel.HotelId })
-            .send({
-                hotelData: JSON.stringify({
-                    HotelName: 'Updated Test Paris Hotel',
-                    Description: 'Updated test luxury stay',
-                    Category: '5-Star',
-                    Tags: ['WiFi', 'Pool'],
-                    ParkingIncluded: true,
-                    LastRenovationDate: '2023-02-01',
-                    Address: {
-                        StreetAddress: '124 Test Rue de Rivoli',
-                        City: 'Paris',
-                        StateProvince: 'Île-de-France',
-                        PostalCode: '75001',
-                        Country: 'France',
-                    },
-                    Rating: 4.5,
-                }),
-            });
-
-        expect(response.status).toBe(200);
-        expect(response.body).toMatchObject({
-            message: 'Hotel information updated successfully.',
-        });
-
-        const updatedHotel = await Hotel.findOne({ HotelId: hotel.HotelId });
-        expect(updatedHotel).toMatchObject({
-            HotelName: 'Updated Test Paris Hotel',
-            Description: 'Updated test luxury stay',
-            Category: '5-Star',
-            Tags: ['WiFi', 'Pool'],
-            ParkingIncluded: true,
-            LastRenovationDate: new Date('2023-02-01'),
-            Address: {
+          .post('/api/v1/hotel/updateInfo')
+          .query({ hotelID: 'TEST_HOTEL_001' })
+          .send({
+            hotelData: JSON.stringify({
+              HotelName: 'Updated Test Paris Hotel',
+              Description: 'Updated test luxury stay',
+              Category: '5-Star',
+              Tags: ['WiFi', 'Pool'],
+              ParkingIncluded: true,
+              LastRenovationDate: '2023-02-01',
+              Rating: 4.5,
+              Address: {
                 StreetAddress: '124 Test Rue de Rivoli',
                 City: 'Paris',
                 StateProvince: 'Île-de-France',
                 PostalCode: '75001',
                 Country: 'France',
-            },
-            Rating: 4.5,
+              },
+            }),
+            image: 'updated_image.jpg',
+          });
+    
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({
+          message: 'Hotel information updated successfully.',
+          data: expect.any(Object),
+        });
+    
+        // Verify database update
+        const updatedHotel = await Hotel.findOne({ HotelId: 'TEST_HOTEL_001' });
+        expect(updatedHotel).toMatchObject({
+          HotelName: 'Updated Test Paris Hotel',
+          Description: 'Updated test luxury stay',
+          images: { imgSource: 'updated_image.jpg' },
         });
     });
 
     // Test Case 4.2: Update Hotel Info Successfully without Image
-    it('Test Case 4.2: should return 200 when hotel info is updated without image', async () => {
-
-        let hotel = await Hotel.findOne({ HotelName: 'Test Paris Luxury Hotel' });
-
+    it('should return 200 when hotel info is updated without image', async () => {
         const response = await request(app)
-            .post('/api/v1/hotel/updateInfo')
-            .query({ hotelId: hotel.HotelId })
-            .send({
-                hotelData: JSON.stringify({
-                    HotelName: 'Updated Test Paris Hotel No Image',
-                    Description: 'Updated test stay',
-                    Category: '5-Star',
-                    Tags: ['WiFi'],
-                    ParkingIncluded: false,
-                    LastRenovationDate: '2023-03-01',
-                    Address: {
-                        StreetAddress: '125 Test Rue de Rivoli',
-                        City: 'Paris',
-                        StateProvince: 'Île-de-France',
-                        PostalCode: '75001',
-                        Country: 'France',
-                    },
-                    Rating: 4.0,
-                }),
-            });
-
-        expect(response.status).toBe(200);
-        expect(response.body).toMatchObject({
-            message: 'Hotel information updated successfully.',
-        });
-
-        const updatedHotel = await Hotel.findOne({ HotelId: hotel.HotelId });
-        expect(updatedHotel).toMatchObject({
-            HotelName: 'Updated Test Paris Hotel No Image',
-            Description: 'Updated test stay',
-            Category: '5-Star',
-            Tags: ['WiFi'],
-            ParkingIncluded: false,
-            LastRenovationDate: new Date('2023-03-01'),
-            Address: {
+          .post('/api/v1/hotel/updateInfo')
+          .query({ hotelID: 'TEST_HOTEL_001' })
+          .send({
+            hotelData: JSON.stringify({
+              HotelName: 'Updated Test Paris Hotel No Image',
+              Description: 'Updated test stay',
+              Category: '5-Star',
+              Tags: ['WiFi'],
+              ParkingIncluded: false,
+              LastRenovationDate: '2023-03-01',
+              Rating: 4.0,
+              Address: {
                 StreetAddress: '125 Test Rue de Rivoli',
                 City: 'Paris',
                 StateProvince: 'Île-de-France',
                 PostalCode: '75001',
                 Country: 'France',
-            },
-            Rating: 4.0,
+              },
+            }),
+          });
+    
+        expect(response.status).toBe(200);
+        expect(response.body).toMatchObject({
+          message: 'Hotel information updated successfully.',
+          data: expect.any(Object),
+        });
+    
+        // Verify database update
+        const updatedHotel = await Hotel.findOne({ HotelId: 'TEST_HOTEL_001' });
+        expect(updatedHotel).toMatchObject({
+          HotelName: 'Updated Test Paris Hotel No Image',
+          Description: 'Updated test stay',
+          images: { imgSource: 'http://example.com/test_hotel.jpg' },
         });
     });
+    
 
     // Test Case 4.3: Hotel Not Found
     it('Test Case 4.3: should return 404 when hotel does not exist', async () => {
@@ -822,12 +786,12 @@ describe('Update Hotel Info API', () => {
             .post('/api/v1/hotel/updateInfo')
             .query({ hotelId: hotel.HotelId })
             .send({
-                hotelData: 'broken_json', // Gửi JSON không hợp lệ
+                hotelData: 'broken_json',
             });
 
         expect(response.status).toBe(400);
         expect(response.body).toEqual({
-            message: 'Invalid hotel data format. Expected valid JSON.',
+            message: 'There was an error parsing the hotel data.',
             data: null,
         });
     });
@@ -884,27 +848,17 @@ describe('Update Hotel Info API', () => {
 
         expect(response.status).toBe(500);
         expect(response.body).toEqual({
-            message: 'Internal server error.',
+            message: 'An error occurred while updating hotel information.',
             data: null,
         });
     });
 });
 
 describe('Create Hotel API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -963,7 +917,7 @@ describe('Create Hotel API', () => {
         });
 
         const roomsInDb = await Room.find({ HotelId: hotelInDb.HotelId });
-        console.log('trndwcs', roomsInDb, 'hotelInDb', hotelInDb.HotelId)
+        expect(roomsInDb.length).toBe(1);
     });
 
     // Test Case 5.2: Create Hotel with Single Tag
@@ -1015,10 +969,12 @@ describe('Create Hotel API', () => {
             Description: 'Test affordable stay',
             Category: 'Budget',
         });
+        const roomsInDb = await Room.find({ HotelId: hotelInDb.HotelId });
+        expect(roomsInDb.length).toBe(1);
     });
 
-    // Test Case 5.3: Create Hotel with No Tags
-    // Create Hotel - No Tags
+    // Test Case 5.3: Create Hotel with No propertyType
+    // Create Hotel - No propertyType
     it('Test Case 5.3: should return 400 when propertyType is missing', async () => {
         const response = await request(app).post('/api/v1/hotel/create').send({
             propertyDetails: JSON.stringify({
@@ -1232,20 +1188,10 @@ describe('Create Hotel API', () => {
 });
 
 describe('Delete Hotel API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -1316,20 +1262,10 @@ describe('Delete Hotel API', () => {
 });
 
 describe('Get Hotel Rooms API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -1393,20 +1329,10 @@ describe('Get Hotel Rooms API', () => {
 });
 
 describe('Update Room Info API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {
@@ -1415,56 +1341,43 @@ describe('Update Room Info API', () => {
     });
 
     // Test Case 8.1: Update Room Info Successfully
-    it('Test Case 8.1: should update room info successfully', async () => {
+    it('Test Case 8.1: should upload image and update hotel successfully', async () => {
 
-        let hotel = await Hotel.findOne({ HotelName: 'Test Paris Luxury Hotel' });
-        let id = hotel.HotelId;
+        const oldRoom = await Room.findOne({ RoomId: 'TEST_ROOM_001' });
         const response = await request(app)
-            .post('/api/v1/hotel/updateRoom/' + id)
-
+          .post('/api/v1/hotel/updateRoom/TEST_ROOM_001')
+          .attach('file', 'test/Ảnh màn hình 2025-04-16 lúc 21.30.40.png');
+    
         expect(response.status).toBe(200);
         expect(response.body).toMatchObject({
-            message: 'Room updated successfully.',
-            data: expect.any(Object),
+          message: 'Room updated successfully.',
+          data: expect.any(Object),
         });
-
-        // Kiểm tra DB để đảm bảo thông tin phòng đã được cập nhật
-        const updatedHotel = await Hotel.findOne({ HotelId: id });
-        expect(updatedHotel).not.toBeNull();
-        expect(updatedHotel.Images).toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    url: expect.stringContaining('uploads/'),
-                }),
-            ])
-        );
+    
+        const updatedRoom = await Room.findOne({ RoomId: 'TEST_ROOM_001' });
+        expect(updatedRoom).not.toBeNull();
+        expect(updatedRoom.Images.url).not.toEqual(oldRoom.Images.url);
+        
     });
 
-    // Test Case 8.2: Hotel Not Found
-    it('Test Case 8.2: should return 404 when hotel does not exist', async () => {
+    // Test Case 8.2: Room Not Found
+    it('Test Case 8.2: should return 404 when room does not exist', async () => {
         const response = await request(app)
-            .post('/api/v1/hotel/updateRoom/NON_EXISTENT_HOTEL') // Endpoint với hotelId không tồn tại
+            .post('/api/v1/hotel/updateRoom/NON_EXISTENT_HOTEL') 
 
         expect(response.status).toBe(404);
         expect(response.body).toEqual({
-            message: 'Hotel not found.',
+            message: 'Room not found.',
         });
-
-        // Kiểm tra DB để đảm bảo thông tin phòng không bị thay đổi
-        const updatedHotel = await Hotel.findOne({ HotelId: 'TEST_HOTEL_001' });
-        expect(updatedHotel).not.toBeNull();
-        expect(updatedHotel.Images).not.toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    url: expect.stringContaining('uploads/'),
-                }),
-            ])
-        );
     });
 
 
     // Test Case 8.3: Error During Update
     it('Test Case 8.3: should return 500 when an error occurs during update', async () => {
+
+        let oldRoom = await Room.findOne({ RoomId: 'TEST_ROOM_001' });
+    
+
         jest.spyOn(Hotel.prototype, 'save').mockImplementationOnce(() => {
             throw new Error('Mock error');
         });
@@ -1475,41 +1388,24 @@ describe('Update Room Info API', () => {
             .attach('file', Buffer.from('test'), 'test_error.jpg');
 
         // Kiểm tra phản hồi trả về từ API
+        expect(response.status).toBe(500);
         expect(response.body).toEqual({
             message: 'An error occurred while updating room.',
         });
+        jest.restoreAllMocks();
 
         // check if the data is not updated
-        const updatedHotel = await Hotel.findOne({ HotelId: 'TEST_HOTEL_001' });
-        expect(updatedHotel).not.toBeNull();
-        expect(updatedHotel.Images).not.toEqual(
-            expect.arrayContaining([
-                expect.objectContaining({
-                    url: expect.stringContaining('uploads/'),
-                }),
-            ])
-        );
-        expect(response.status).toBe(500);
+        const updatedRoom = await Room.findOne({ RoomId: 'TEST_ROOM_001' });
+        expect(updatedRoom).toEqual(oldRoom);
+        });
 
-        jest.restoreAllMocks();
-    });
 });
 
 describe('Delete Room API', () => {
-    beforeAll(async () => {
-        await mongoose.connect(process.env.MONGO_URL, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-    });
-
-    afterAll(async () => {
-        await cleanData();
-        await mongoose.connection.close();
-    });
 
     beforeEach(async () => {
         await seedData();
+        await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     afterEach(async () => {

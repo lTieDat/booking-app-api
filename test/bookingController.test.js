@@ -822,7 +822,7 @@ describe('Booking Controller APIs', () => {
         HotelName: 'Test New Luxury Hotel',
         Description: 'Test new luxury stay',
         Category: 'Luxury',
-        images: [{ imgSource: 'test_new_hotel.jpg', caption: 'overview' }],
+        images: { imgSource: 'test_new_hotel.jpg', caption: 'overview' },
         Tags: ['WiFi', 'Pool'],
         ParkingIncluded: true,
         LastRenovationDate: new Date('2023-04-01'),
@@ -837,13 +837,14 @@ describe('Booking Controller APIs', () => {
         },
         Location: {
           type: 'Point',
-          coordinates: [12.4964, 41.9028], // Example coordinates for Rome
+          coordinates: [12.4964, 41.9028],
           _id: '67fd345baca3d86a9740f04b',
         },
         createdAt: new Date('2025-04-14T16:14:19.031Z'),
         updatedAt: new Date('2025-04-14T16:14:19.031Z'),
         __v: 0,
-      })
+      });
+    
       await Booking.create([
         {
           bookingId: 'BOOK1',
@@ -874,14 +875,19 @@ describe('Booking Controller APIs', () => {
           hotelId: 'Zxl2qwdTKn',
           customerName: 'Bob Smith',
           totalAmount: 100,
-          numberOfAdults: 0,
+          numberOfAdults: 4,
           numberOfChildren: 0,
           status: 'confirmed',
           createdDate: new Date('2025-04-22'),
           checkInDate: '2025-04-22',
           checkOutDate: '2025-04-27',
         },
-      ])
+      ]);
+    });
+
+    afterEach(async () => {
+      await Booking.deleteMany({ bookingId: { $in: ['BOOK1', 'BOOK2', 'BOOK3'] } });
+      await Hotel.deleteMany({ HotelId: 'PoWvBfLBf3eeO49oFPn1' });
     })
 
     it('6.1 - should fetch bookings with no filters', async () => {

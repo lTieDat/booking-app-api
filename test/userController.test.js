@@ -10,15 +10,16 @@ const md5 = require('md5')
 jest.mock('../helper/sendmail.js') // Mock email sending
 
 describe('User Controller APIs', () => {
-  beforeAll(async () => {
-    await mongoose.connect(process.env.MONGO_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    await new Promise((resolve) => {
-      mongoose.connection.once('connected', resolve)
-    })
-  })
+    beforeAll(async () => {
+        await mongoose.connect(process.env.MONGO_URL, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        })
+        // Wait for connection to be ready
+        await new Promise((resolve) => {
+            mongoose.connection.once('connected', resolve)
+        })
+    }, 10000)
 
   beforeEach(async () => {
     mailHelper.sendMail.mockReset()
