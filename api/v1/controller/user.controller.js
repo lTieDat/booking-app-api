@@ -8,11 +8,11 @@ const Account = require('../../../models/account.model')
 
 const handleError = (res, error, message = 'fail', status = 500) => {
   console.error(error)
-  res.status(status).json({ status, message })
+  res.status(status).json({message })
 }
 
 const handleResponse = (res, status, message, data = {}) => {
-  return res.status(status).json({ status, message, ...data })
+  return res.status(status).json({message, ...data })
 }
 
 // [POST] /api/v1/users/register

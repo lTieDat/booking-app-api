@@ -12,74 +12,76 @@ const Setting = require('../../../models/setting.model')
 
 //[GET] /api/v1/admin/DashboardData/:adminId
 module.exports.getDashboardData = async (req, res) => {
-  // try {
-  //   const token = req.params.adminId
-  //   const manager = await Account.findOne({ token })
+  try {
+    const token = req.params.adminId
+    const manager = await Account.findOne({ token })
+    console.log('Manager:', manager)
+    console.log('Token:', token)
 
-  //   if (!manager) {
-  //     return res.status(404).json({ error: 'Manager not found' })
-  //   }
+    if (!manager) {
+      return res.status(404).json({ error: 'Manager not found' })
+    }
 
-  //   const hotelIds = manager.hotel_id
-  //   const rooms = await Room.find({
-  //     HotelId: { $in: hotelIds },
-  //   })
+    const hotelIds = manager.hotel_id
+    const rooms = await Room.find({
+      HotelId: { $in: hotelIds },
+    })
 
-  //   const hotels = await Hotel.find({
-  //     HotelId: { $in: hotelIds },
-  //   })
+    const hotels = await Hotel.find({
+      HotelId: { $in: hotelIds },
+    })
 
-  //   const bookings = await Booking.find({
-  //     hotelId: { $in: hotelIds },
-  //   })
+    const bookings = await Booking.find({
+      hotelId: { $in: hotelIds },
+    })
 
-  //   const pendingBookings = bookings.filter((booking) => booking.status === 'pending')
+    const pendingBookings = bookings.filter((booking) => booking.status === 'pending')
 
-  //   const paidBookings = bookings.filter((booking) => booking.status === 'paid')
+    const paidBookings = bookings.filter((booking) => booking.status === 'paid')
 
-  //   const confirmedBookings = bookings.filter((booking) => booking.status === 'confirmed')
+    const confirmedBookings = bookings.filter((booking) => booking.status === 'confirmed')
 
-  //   // Calculate total revenue for each hotel
-  //   const totalRevenue = hotels.map((hotel) => {
-  //     const hotelBookings = bookings.filter((booking) => booking.hotelId === hotel.HotelId)
-  //     return {
-  //       hotelId: hotel.HotelName,
-  //       totalRevenue: hotelBookings.reduce((sum, booking) => sum + booking.totalAmount, 0),
-  //     }
-  //   })
+    // Calculate total revenue for each hotel
+    const totalRevenue = hotels.map((hotel) => {
+      const hotelBookings = bookings.filter((booking) => booking.hotelId === hotel.HotelId)
+      return {
+        hotelId: hotel.HotelName,
+        totalRevenue: hotelBookings.reduce((sum, booking) => sum + booking.totalAmount, 0),
+      }
+    })
 
-  //   //get free rooms, booked rooms, and total rooms for each hotel
-  //   const hotelRoomData = hotels.map((hotel) => {
-  //     const hotelRooms = rooms.filter((room) => room.HotelId == hotel.HotelId)
+    //get free rooms, booked rooms, and total rooms for each hotel
+    const hotelRoomData = hotels.map((hotel) => {
+      const hotelRooms = rooms.filter((room) => room.HotelId == hotel.HotelId)
 
-  //     const totalRooms = hotelRooms.reduce((sum, room) => sum + room.MaxQuantity, 0)
-  //     const freeRooms = hotelRooms.reduce((sum, room) => sum + room.NumberAvailable, 0)
-  //     const bookedRooms = totalRooms - freeRooms
-  //     return {
-  //       hotelId: hotel.HotelName,
-  //       totalRooms,
-  //       bookedRooms,
-  //       freeRooms,
-  //     }
-  //   })
+      const totalRooms = hotelRooms.reduce((sum, room) => sum + room.MaxQuantity, 0)
+      const freeRooms = hotelRooms.reduce((sum, room) => sum + room.NumberAvailable, 0)
+      const bookedRooms = totalRooms - freeRooms
+      return {
+        hotelId: hotel.HotelName,
+        totalRooms,
+        bookedRooms,
+        freeRooms,
+      }
+    })
 
-  //   res.json({
-  //     message: 'Dashboard data fetched successfully',
-  //     status: 200,
-  //     data: {
-  //       totalHotels: hotels.length,
-  //       totalBookings: bookings.length,
-  //       pendingBookings: pendingBookings.length,
-  //       paidBookings: paidBookings.length,
-  //       confirmedBookings: confirmedBookings.length,
-  //       totalRevenue,
-  //       hotelRoomData,
-  //     },
-  //   })
-  // } catch (error) {
-  //   console.error('Error fetching dashboard data:', error)
-  //   res.status(500).json({ error: 'An error occurred while fetching dashboard data' })
-  // }
+    res.json({
+      message: 'Dashboard data fetched successfully',
+      status: 200,
+      data: {
+        totalHotels: hotels.length,
+        totalBookings: bookings.length,
+        pendingBookings: pendingBookings.length,
+        paidBookings: paidBookings.length,
+        confirmedBookings: confirmedBookings.length,
+        totalRevenue,
+        hotelRoomData,
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error)
+    res.status(500).json({ error: 'An error occurred while fetching dashboard data' })
+  }
 }
 
 //[POST] /admin/login

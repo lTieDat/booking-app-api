@@ -818,7 +818,7 @@ describe('Booking Controller APIs', () => {
     beforeEach(async () => {
       await Hotel.create({
         _id: '67fd345baca3d86a9740f049',
-        HotelId: 'Zxl2qwdTKn',
+        HotelId: 'PoWvBfLBf3eeO49oFPn1',
         HotelName: 'Test New Luxury Hotel',
         Description: 'Test new luxury stay',
         Category: 'Luxury',
@@ -848,7 +848,7 @@ describe('Booking Controller APIs', () => {
       await Booking.create([
         {
           bookingId: 'BOOK1',
-          hotelId: 'Zxl2qwdTKn',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           customerName: 'John Doe',
           totalAmount: 100,
           numberOfAdults: 2,
@@ -860,7 +860,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK2',
-          hotelId: 'Zxl2qwdTKn',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           customerName: 'Jane Doe',
           totalAmount: 50,
           numberOfAdults: 1,
@@ -872,7 +872,7 @@ describe('Booking Controller APIs', () => {
         },
         {
           bookingId: 'BOOK3',
-          hotelId: 'Zxl2qwdTKn',
+          hotelId: 'PoWvBfLBf3eeO49oFPn1',
           customerName: 'Bob Smith',
           totalAmount: 100,
           numberOfAdults: 4,
@@ -891,7 +891,7 @@ describe('Booking Controller APIs', () => {
     })
 
     it('6.1 - should fetch bookings with no filters', async () => {
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
@@ -906,7 +906,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.2 - should filter by status', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ filterStatus: 'pending' })
         .timeout(10000)
 
@@ -919,7 +919,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.3 - should search by customer name', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -932,7 +932,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.4 - should sort by totalAmountAsc', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ sortBy: 'totalAmountAsc' })
         .timeout(10000)
 
@@ -972,7 +972,7 @@ describe('Booking Controller APIs', () => {
       ])
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ page: 2, itemsPerPage: 2 })
         .timeout(10000)
 
@@ -996,7 +996,7 @@ describe('Booking Controller APIs', () => {
     it('6.7 - should handle database error', async () => {
       jest.spyOn(Booking, 'find').mockRejectedValueOnce(new Error('DB failure'))
 
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -1018,7 +1018,7 @@ describe('Booking Controller APIs', () => {
       })
 
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: 'John' })
         .timeout(10000)
 
@@ -1031,7 +1031,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.9 - should sort by totalAmountDesc', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ sortBy: 'totalAmountDesc' })
         .timeout(10000)
 
@@ -1048,7 +1048,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.10 - should sort by numberOfGuest', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ sortBy: 'numberOfGuest' })
         .timeout(10000)
 
@@ -1088,7 +1088,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.12 - should handle empty search query', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: '' })
         .timeout(10000)
 
@@ -1101,7 +1101,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.13 - should handle negative page number', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ page: -1 })
         .timeout(10000)
 
@@ -1114,7 +1114,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.14 - should handle zero itemsPerPage', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ itemsPerPage: 0 })
         .timeout(10000)
 
@@ -1126,7 +1126,7 @@ describe('Booking Controller APIs', () => {
     it('6.15 - should handle hotel query failure', async () => {
       jest.spyOn(Hotel, 'findOne').mockRejectedValueOnce(new Error('Hotel query failure'))
 
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn').timeout(10000)
+      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -1136,7 +1136,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.16 - should handle special characters in search query', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ searchQuery: 'John@Doe' })
         .timeout(10000)
 
@@ -1149,7 +1149,7 @@ describe('Booking Controller APIs', () => {
 
     it('6.17 - should filter by month', async () => {
       const response = await request(app)
-        .get('/api/v1/booking/bookingHistory/manager/Zxl2qwdTKn')
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
         .query({ month: '4' })
         .timeout(10000)
 

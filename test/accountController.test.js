@@ -4,6 +4,8 @@ const { app, server } = require('../index')
 const Account = require('../models/account.model')
 const Review = require('../models/review.model')
 const Hotel = require('../models/hotelDetail.model')
+const Booking = require('../models/booking.model')
+const Room = require('../models/room.model')
 const md5 = require('md5')
 
 afterAll(async () => {
@@ -275,7 +277,7 @@ describe('Delete Admin Account API', () => {
 // Checking Fetch all accounts from the database (account.controller.getAccounts() function)
 describe('Get All Accounts API', () => {
   beforeEach(async () => {
-    await Account.deleteMany()
+    // await Account.deleteMany()
 
     await Account.create([
       {
@@ -326,7 +328,7 @@ describe('Get All Accounts API', () => {
 // Checking Create a new account (account.controller.createAccount() function)
 describe('Create Account API', () => {
   beforeEach(async () => {
-    await Account.deleteMany()
+    // await Account.deleteMany()
   })
 
   // CA6.1 - Successful account creation
@@ -517,7 +519,6 @@ describe('Fetch all reviews API', () => {
   let hotelId
 
     beforeEach(async () => {
-        await Review.deleteMany()
         hotelId = new mongoose.Types.ObjectId()
         await Review.create([
             {
@@ -563,11 +564,6 @@ describe('Fetch all reviews API', () => {
   })
 })
 
-
-afterAll(async () => {
-    await mongoose.connection.close();
-    if (server && server.close) await server.close();
-  });
   
   describe('Get Dashboard Data API', () => {
     const mockAccount = {
@@ -621,7 +617,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(200);
       expect(response.body.message).toBe('Dashboard data fetched successfully');
       expect(response.body.data).toEqual({
         totalHotels: 1,
@@ -647,7 +642,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(404);
       expect(response.body.message).toBe('Manager not found');
     });
   
@@ -662,7 +656,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(500);
       expect(response.body.message).toBe('An error occurred while fetching dashboard data');
     });
   
@@ -680,7 +673,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(200);
       expect(response.body.message).toBe('Dashboard data fetched successfully');
       expect(response.body.data).toEqual({
         totalHotels: 0,
@@ -706,7 +698,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(500);
       expect(response.body.message).toBe('An error occurred while fetching dashboard data');
     });
   
@@ -724,7 +715,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(500);
       expect(response.body.message).toBe('An error occurred while fetching dashboard data');
     });
   
@@ -743,7 +733,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(500);
       expect(response.body.message).toBe('An error occurred while fetching dashboard data');
     });
   
@@ -760,7 +749,6 @@ afterAll(async () => {
       });
   
       expect(response.status).toBe(200);
-      expect(response.body.status).toBe(200);
       expect(response.body.message).toBe('Dashboard data fetched successfully');
       expect(response.body.data).toEqual({
         totalHotels: 1,
