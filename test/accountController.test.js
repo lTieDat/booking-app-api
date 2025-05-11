@@ -27,14 +27,14 @@ describe('Admin Login API', () => {
   })
 
   // Test case AL1.1 - Email not found
-  it('should return 404 if email does not exist', async () => {
+  it('should return 401 if email does not exist', async () => {
     const response = await request(app).post('/api/v1/admin/login').send({
       email: 'notfound@example.com',
       password: 'anyPassword',
     })
 
     expect(response.status).toBe(200)
-    expect(response.body.status).toBe(404)
+    expect(response.body.status).toBe(401)
     expect(response.body.message).toBe('Email not found')
   })
 
@@ -101,13 +101,12 @@ describe('Get Admin Account Details API', () => {
   })
 
   // Test case AM2.1 - Token not associated with any account
-  it('should return 404 if token is invalid (account not found)', async () => {
+  it('should return 401 if token is invalid (account not found)', async () => {
     const response = await request(app).get('/api/v1/admin/me').query({
       tokenID: 'nonexistent-token-xyz',
     })
 
-    expect(response.status).toBe(200)
-    expect(response.body.status).toBe(404)
+    expect(response.body.status).toBe(401)
     expect(response.body.message).toMatch(/account not found/i)
   })
 
@@ -162,7 +161,7 @@ describe('Update Admin Account API', () => {
   })
 
   // Test case UA3.1 - Account to be updated does not exist
-  it('should return 404 if account does not exist', async () => {
+  it('should return 401 if account does not exist', async () => {
     const fakeId = new mongoose.Types.ObjectId()
 
     const response = await request(app).put(`/api/v1/admin/superAdmin/account/${fakeId}`).send({
@@ -172,7 +171,7 @@ describe('Update Admin Account API', () => {
     })
 
     expect(response.status).toBe(200)
-    expect(response.body.status).toBe(404)
+    expect(response.body.status).toBe(401)
     expect(response.body.message).toBe('Account not found')
   })
 
@@ -234,13 +233,13 @@ describe('Delete Admin Account API', () => {
   })
 
   // DA4.1 - Account to be deleted does not exist
-  it('should return 404 if account to delete does not exist', async () => {
+  it('should return 401 if account to delete does not exist', async () => {
     const fakeId = new mongoose.Types.ObjectId()
 
     const response = await request(app).delete(`/api/v1/admin/superAdmin/account/${fakeId}`)
 
     expect(response.status).toBe(200)
-    expect(response.body.status).toBe(404)
+    expect(response.body.status).toBe(401)
     expect(response.body.message).toBe('Account not found')
   })
 
@@ -377,37 +376,36 @@ describe('Add a new review or update an existing review API', () => {
     // await Review.deleteMany()
     // await Hotel.deleteMany()
 
-        const hotelObjectId = new mongoose.Types.ObjectId()
-        hotelId = hotelObjectId.toString()
-        userId = new mongoose.Types.ObjectId().toString()
+    const hotelObjectId = new mongoose.Types.ObjectId()
+    hotelId = hotelObjectId.toString()
+    userId = new mongoose.Types.ObjectId().toString()
 
-        await Hotel.create({
-            _id: hotelObjectId,
-            HotelId: hotelId,
-            HotelName: 'Test Hotel',
-            Description: 'Test Description',
-            Rating: 0,
-            Address: {
-                StreetAddress: '123 Main St',
-                City: 'Testville',
-                StateProvince: 'CA',
-                PostalCode: '12345',
-                Country: 'Testland',
-            },
-            Location: {
-                type: 'Point',
-                coordinates: [0, 0],
-            },
-            images: {
-                imgSource: 'test.jpg',
-            },
-        })
+    await Hotel.create({
+      _id: hotelObjectId,
+      HotelId: hotelId,
+      HotelName: 'Test Hotel',
+      Description: 'Test Description',
+      Rating: 0,
+      Address: {
+        StreetAddress: '123 Main St',
+        City: 'Testville',
+        StateProvince: 'CA',
+        PostalCode: '12345',
+        Country: 'Testland',
+      },
+      Location: {
+        type: 'Point',
+        coordinates: [0, 0],
+      },
+      images: {
+        imgSource: 'test.jpg',
+      },
     })
+  })
 
-    afterEach(async () => {
-        await Review.deleteMany({ hotelId , userId , bookingId})
-    })
-
+  afterEach(async () => {
+    await Review.deleteMany({ hotelId, userId, bookingId })
+  })
 
   // AR7.1 - Hotel not found
   it('should return 404 if hotel is not found', async () => {
@@ -434,22 +432,20 @@ describe('Add a new review or update an existing review API', () => {
       bookingId,
     })
 
-        const res = await request(app)
-            .post(`/api/v1/hotel/${hotelId}/review/${userId}`)
-            .send({
-                reviewText: 'Great place!',
-                rating: 5,
-                bookingId,
-            })
-        expect(res.status).toBe(200)
-        expect(res.body.message).toBe('Review updated successfully.')
-        
-        let reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
-        expect(reviewInDb).not.toBeNull()
-        expect(reviewInDb.reviewText).toBe('Great place!')
-        expect(reviewInDb.rating).toBe(5)
-        expect(reviewInDb.bookingId).toBe(bookingId)
+    const res = await request(app).post(`/api/v1/hotel/${hotelId}/review/${userId}`).send({
+      reviewText: 'Great place!',
+      rating: 5,
+      bookingId,
     })
+    expect(res.status).toBe(200)
+    expect(res.body.message).toBe('Review updated successfully.')
+
+    let reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
+    expect(reviewInDb).not.toBeNull()
+    expect(reviewInDb.reviewText).toBe('Great place!')
+    expect(reviewInDb.rating).toBe(5)
+    expect(reviewInDb.bookingId).toBe(bookingId)
+  })
 
   // AR7.3 - Add a new review
   it('should add a new review', async () => {
@@ -459,8 +455,8 @@ describe('Add a new review or update an existing review API', () => {
       bookingId,
     })
 
-        expect(res.status).toBe(200)
-        expect(res.body.message).toBe('Review added successfully.')
+    expect(res.status).toBe(200)
+    expect(res.body.message).toBe('Review added successfully.')
 
     const reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
     expect(reviewInDb).not.toBeNull()
@@ -484,68 +480,66 @@ describe('Add a new review or update an existing review API', () => {
     // expect(res.body.status).toBe(500)
     expect(res.body.message).toBe('An error occurred while processing the review.')
 
-        Review.findOne = originalFind // restore
+    Review.findOne = originalFind // restore
+  })
+
+  // AR7.5 - Add to an existing review
+  it('should add to an existing review', async () => {
+    await Review.create({
+      hotelId,
+      userId,
+      reviewText: 'Old review',
+      rating: 3,
+      bookingId,
     })
 
-    // AR7.5 - Add to an existing review
-    it('should add to an existing review', async () => {
-        await Review.create({
-            hotelId,
-            userId,
-            reviewText: 'Old review',
-            rating: 3,
-            bookingId,
-        })
-
-        const res = await request(app)
-            .post(`/api/v1/hotel/${hotelId}/review/${userId}`)
-            .send({
-                reviewText: 'Awesome stay!',
-                rating: 4,
-                bookingId,
-            })
-
-        // expect(res.status).toBe(409)
-        expect(res.body.message).toBe('Conflict: Review already exists for this booking.')
-
-        const reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
-        expect(reviewInDb).not.toBeNull()
-        expect(reviewInDb.reviewText).toBe('Old review')
+    const res = await request(app).post(`/api/v1/hotel/${hotelId}/review/${userId}`).send({
+      reviewText: 'Awesome stay!',
+      rating: 4,
+      bookingId,
     })
+
+    // expect(res.status).toBe(409)
+    expect(res.body.message).toBe('Conflict: Review already exists for this booking.')
+
+    const reviewInDb = await Review.findOne({ hotelId, userId, bookingId })
+    expect(reviewInDb).not.toBeNull()
+    expect(reviewInDb.reviewText).toBe('Old review')
+  })
 })
 
 // Checking Fetch all reviews for a specific hotel (hotel.controller.getReviews() function)
 describe('Fetch all reviews API', () => {
   let hotelId
 
-    beforeEach(async () => {
-        hotelId = new mongoose.Types.ObjectId()
-        await Review.create([
-            {
-                hotelId: hotelId,
-                userId: 'user1',
-                rating: 4,
-                reviewText: 'Great place!',
-                bookingId: 'b1',
-            },
-            {
-                hotelId: hotelId,
-                userId: 'user2',
-                rating: 5,
-                reviewText: 'Excellent!',
-                bookingId: 'b2',
-            },
-        ])
-    })
+  beforeEach(async () => {
+    hotelId = new mongoose.Types.ObjectId()
+    await Review.create([
+      {
+        hotelId: hotelId,
+        userId: 'user1',
+        rating: 4,
+        reviewText: 'Great place!',
+        bookingId: 'b1',
+      },
+      {
+        hotelId: hotelId,
+        userId: 'user2',
+        rating: 5,
+        reviewText: 'Excellent!',
+        bookingId: 'b2',
+      },
+    ])
+  })
 
   // GR8.1 - Successfully get reviews
   it('should return 200 and list of reviews for a valid hotelId', async () => {
     const response = await request(app).get(`/api/v1/hotel/${hotelId}/reviews`)
 
-        expect(response.status).toBe(200)
-        expect(response.body.message).toBe('Reviews found.')
-        expect(Array.isArray(response.body.data)).toBe(true)
-    })
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('Reviews found.')
+    expect(Array.isArray(response.body.data)).toBe(true)
+  })
 
   // GR8.2 - Simulated DB/server error
   it('should return 500 if database error occurs', async () => {
@@ -564,200 +558,175 @@ describe('Fetch all reviews API', () => {
   })
 })
 
-  
-  describe('Get Dashboard Data API', () => {
-    const mockAccount = {
-      _id: '677ff0bd0f159aa5ac446b26',
-      full_name: 'Admin User',
-      email: 'admin@example.com',
-      password: 'cca44a238a0b923820dcc509a6f75849b',
-      hotel_id: ['7YTNd7Ptcr'],
-      token: 'avgHILDt7qko0a4hLmbn1',
-      phone: '1234567890',
-      avatar: 'https://example.com/avatar.png',
-      role_id: 'admin',
-      status: 'active',
-    };
-  
-    const mockHotel = {
-      _id: '67fe56def159aa5ac44a0b04',
-      HotelId: '7YTNd7Ptcr',
-      HotelName: 'Luxe Elegance Hotel',
-      Description: 'Luxe Elegance Hotel offers a luxurious retreat in the heart of Paris, …',
-      Description_fr: 'Luxe Elegance Hotel propose une retraite luxueuse au cœur de Paris, al…',
-      Category: 'Luxury',
-      images: {},
-      Tags: ['luxury', 'paris', 'retreat'],
-      ParkingIncluded: true,
-      LastRenovationDate: '2019-11-15T00:00:00Z',
-      Rating: 4.8,
-      Address: {},
-      Location: {},
-    };
-  
-    // Test case 7.1 - Successfully fetch dashboard data with valid adminId
-    it('should successfully fetch dashboard data with valid adminId', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount);
-  
-      // Mock Room.find
-      jest.spyOn(Room, 'find').mockResolvedValue([
-        { HotelId: '7YTNd7Ptcr', MaxQuantity: 10, NumberAvailable: 5 },
-      ]);
-  
-      // Mock Hotel.find
-      jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel]);
-  
-      // Mock Booking.find
-      jest.spyOn(Booking, 'find').mockResolvedValue([
-        { hotelId: '7YTNd7Ptcr', status: 'paid', totalAmount: 100 },
-      ]);
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Dashboard data fetched successfully');
-      expect(response.body.data).toEqual({
-        totalHotels: 1,
-        totalBookings: 1,
-        pendingBookings: 0,
-        paidBookings: 1,
-        confirmedBookings: 0,
-        totalRevenue: [
-          { hotelId: 'Luxe Elegance Hotel', totalRevenue: 100 },
-        ],
-        hotelRoomData: [
-          { hotelId: 'Luxe Elegance Hotel', totalRooms: 10, bookedRooms: 5, freeRooms: 5 },
-        ],
-      });
-    });
-  
-    // Test case 7.2 - Handle invalid adminId (manager not found)
-    it('should return 404 if adminId is invalid', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(null);
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'invalidToken',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Manager not found');
-    });
-  
-    // Test case 7.3 - Handle database query failure for Account
-    it('should return 500 if Account query fails', async () => {
-      jest.spyOn(Account, 'findOne').mockImplementation(() => {
-        throw new Error('Database error');
-      });
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('An error occurred while fetching dashboard data');
-    });
-  
-    // Test case 7.4 - Handle empty hotel list
-    it('should handle empty hotel list', async () => {
-      const accountWithEmptyHotels = { ...mockAccount, hotel_id: [] };
-      jest.spyOn(Account, 'findOne').mockResolvedValue(accountWithEmptyHotels);
-  
-      jest.spyOn(Room, 'find').mockResolvedValue([]);
-      jest.spyOn(Hotel, 'find').mockResolvedValue([]);
-      jest.spyOn(Booking, 'find').mockResolvedValue([]);
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Dashboard data fetched successfully');
-      expect(response.body.data).toEqual({
-        totalHotels: 0,
-        totalBookings: 0,
-        pendingBookings: 0,
-        paidBookings: 0,
-        confirmedBookings: 0,
-        totalRevenue: [],
-        hotelRoomData: [],
-      });
-    });
-  
-    // Test case 7.5 - Handle database query failure for Room
-    it('should return 500 if Room query fails', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount);
-  
-      jest.spyOn(Room, 'find').mockImplementation(() => {
-        throw new Error('Database error');
-      });
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('An error occurred while fetching dashboard data');
-    });
-  
-    // Test case 7.6 - Handle database query failure for Hotel
-    it('should return 500 if Hotel query fails', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount);
-  
-      jest.spyOn(Room, 'find').mockResolvedValue([]);
-      jest.spyOn(Hotel, 'find').mockImplementation(() => {
-        throw new Error('Database error');
-      });
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('An error occurred while fetching dashboard data');
-    });
-  
-    // Test case 7.7 - Handle database query failure for Booking
-    it('should return 500 if Booking query fails', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount);
-  
-      jest.spyOn(Room, 'find').mockResolvedValue([]);
-      jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel]);
-      jest.spyOn(Booking, 'find').mockImplementation(() => {
-        throw new Error('Database error');
-      });
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('An error occurred while fetching dashboard data');
-    });
-  
-    // Test case 7.8 - Handle no bookings for hotels
-    it('should handle no bookings for hotels', async () => {
-      jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount);
-  
-      jest.spyOn(Room, 'find').mockResolvedValue([{ HotelId: '7YTNd7Ptcr', MaxQuantity: 10, NumberAvailable: 8 }]);
-      jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel]);
-      jest.spyOn(Booking, 'find').mockResolvedValue([]);
-  
-      const response = await request(app).get('/api/v1/dashboard').query({
-        adminId: 'avgHILDt7qko0a4hLmbn1',
-      });
-  
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Dashboard data fetched successfully');
-      expect(response.body.data).toEqual({
-        totalHotels: 1,
-        totalBookings: 0,
-        pendingBookings: 0,
-        paidBookings: 0,
-        confirmedBookings: 0,
-        totalRevenue: [{ hotelId: 'Luxe Elegance Hotel', totalRevenue: 0 }],
-        hotelRoomData: [{ hotelId: 'Luxe Elegance Hotel', totalRooms: 10, bookedRooms: 2, freeRooms: 8 }],
-      });
-    });
-  });
+describe('Get Dashboard Data API', () => {
+  const mockAccount = {
+    _id: '677ff0bd0f159aa5ac446b26',
+    full_name: 'Admin User',
+    email: 'admin@example.com',
+    password: 'cca44a238a0b923820dcc509a6f75849b',
+    hotel_id: ['7YTNd7Ptcr'],
+    token: 'avgHILDt7qko0a4hLmbn1',
+    phone: '1234567890',
+    avatar: 'https://example.com/avatar.png',
+    role_id: 'admin',
+    status: 'active',
+  }
+
+  const mockHotel = {
+    _id: '67fe56def159aa5ac44a0b04',
+    HotelId: '7YTNd7Ptcr',
+    HotelName: 'Luxe Elegance Hotel',
+    Description: 'Luxe Elegance Hotel offers a luxurious retreat in the heart of Paris, …',
+    Description_fr: 'Luxe Elegance Hotel propose une retraite luxueuse au cœur de Paris, al…',
+    Category: 'Luxury',
+    images: {},
+    Tags: ['luxury', 'paris', 'retreat'],
+    ParkingIncluded: true,
+    LastRenovationDate: '2019-11-15T00:00:00Z',
+    Rating: 4.8,
+    Address: {},
+    Location: {},
+  }
+
+  // Test case 7.1 - Successfully fetch dashboard data with valid adminId
+  it('should successfully fetch dashboard data with valid adminId', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount)
+
+    // Mock Room.find
+    jest.spyOn(Room, 'find').mockResolvedValue([{ HotelId: '7YTNd7Ptcr', MaxQuantity: 10, NumberAvailable: 5 }])
+
+    // Mock Hotel.find
+    jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel])
+
+    // Mock Booking.find
+    jest.spyOn(Booking, 'find').mockResolvedValue([{ hotelId: '7YTNd7Ptcr', status: 'paid', totalAmount: 100 }])
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('Dashboard data fetched successfully')
+    expect(response.body.data).toEqual({
+      totalHotels: 1,
+      totalBookings: 1,
+      pendingBookings: 0,
+      paidBookings: 1,
+      confirmedBookings: 0,
+      totalRevenue: [{ hotelId: 'Luxe Elegance Hotel', totalRevenue: 100 }],
+      hotelRoomData: [{ hotelId: 'Luxe Elegance Hotel', totalRooms: 10, bookedRooms: 5, freeRooms: 5 }],
+    })
+  })
+
+  // Test case 7.2 - Handle invalid adminId (manager not found)
+  it('should return 404 if adminId is invalid', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(null)
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('Manager not found')
+  })
+
+  // Test case 7.3 - Handle database query failure for Account
+  it('should return 500 if Account query fails', async () => {
+    jest.spyOn(Account, 'findOne').mockImplementation(() => {
+      throw new Error('Database error')
+    })
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('An error occurred while fetching dashboard data')
+  })
+
+  // Test case 7.4 - Handle empty hotel list
+  it('should handle empty hotel list', async () => {
+    const accountWithEmptyHotels = { ...mockAccount, hotel_id: [] }
+    jest.spyOn(Account, 'findOne').mockResolvedValue(accountWithEmptyHotels)
+
+    jest.spyOn(Room, 'find').mockResolvedValue([])
+    jest.spyOn(Hotel, 'find').mockResolvedValue([])
+    jest.spyOn(Booking, 'find').mockResolvedValue([])
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('Dashboard data fetched successfully')
+    expect(response.body.data).toEqual({
+      totalHotels: 0,
+      totalBookings: 0,
+      pendingBookings: 0,
+      paidBookings: 0,
+      confirmedBookings: 0,
+      totalRevenue: [],
+      hotelRoomData: [],
+    })
+  })
+
+  // Test case 7.5 - Handle database query failure for Room
+  it('should return 500 if Room query fails', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount)
+
+    jest.spyOn(Room, 'find').mockImplementation(() => {
+      throw new Error('Database error')
+    })
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('An error occurred while fetching dashboard data')
+  })
+
+  // Test case 7.6 - Handle database query failure for Hotel
+  it('should return 500 if Hotel query fails', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount)
+
+    jest.spyOn(Room, 'find').mockResolvedValue([])
+    jest.spyOn(Hotel, 'find').mockImplementation(() => {
+      throw new Error('Database error')
+    })
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('An error occurred while fetching dashboard data')
+  })
+
+  // Test case 7.7 - Handle database query failure for Booking
+  it('should return 500 if Booking query fails', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount)
+
+    jest.spyOn(Room, 'find').mockResolvedValue([])
+    jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel])
+    jest.spyOn(Booking, 'find').mockImplementation(() => {
+      throw new Error('Database error')
+    })
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('An error occurred while fetching dashboard data')
+  })
+
+  // Test case 7.8 - Handle no bookings for hotels
+  it('should handle no bookings for hotels', async () => {
+    jest.spyOn(Account, 'findOne').mockResolvedValue(mockAccount)
+
+    jest.spyOn(Room, 'find').mockResolvedValue([{ HotelId: '7YTNd7Ptcr', MaxQuantity: 10, NumberAvailable: 8 }])
+    jest.spyOn(Hotel, 'find').mockResolvedValue([mockHotel])
+    jest.spyOn(Booking, 'find').mockResolvedValue([])
+
+    const response = await request(app).get(`/api/v1/admin/dashboard/${mockAccount.token}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.message).toBe('Dashboard data fetched successfully')
+    expect(response.body.data).toEqual({
+      totalHotels: 1,
+      totalBookings: 0,
+      pendingBookings: 0,
+      paidBookings: 0,
+      confirmedBookings: 0,
+      totalRevenue: [{ hotelId: 'Luxe Elegance Hotel', totalRevenue: 0 }],
+      hotelRoomData: [{ hotelId: 'Luxe Elegance Hotel', totalRooms: 10, bookedRooms: 2, freeRooms: 8 }],
+    })
+  })
+})
