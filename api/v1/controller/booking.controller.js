@@ -178,21 +178,21 @@ module.exports.getBookingsByHotelId = async (req, res) => {
     const { filterStatus, sortBy, searchQuery, page = 1, itemsPerPage = 10, month } = req.query
     let query = { hotelId }
     // Test case: Khanh-Whitebox - GetBookingsByHotelId_FilterByStatus_Success (6.2)
-    if (filterStatus) {
-      query.status = filterStatus
+    if (filterStatus?.trim()) {
+      query.status = filterStatus.trim()
     }
     // Test case: Khanh-Whitebox - GetBookingsByHotelId_SearchByCustomerName_Success (6.3), GetBookingsByHotelId_SpecialCharactersSearch_Success (6.16)
-    if (searchQuery) {
-      query.customerName = { $regex: searchQuery, $options: 'i' }
+    if (searchQuery?.trim()) {
+      query.customerName = { $regex: searchQuery.trim(), $options: 'i' }
     }
     // Test case: Khanh-Whitebox - GetBookingsByHotelId_FilterByMonth_Success (6.17)
-    if (month) {
+    if (month?.trim() && month !== 'undefined') {
       query.createdDate = { $regex: `-${month.padStart(2, '0')}-` }
     }
 
     let sort = { createdDate: -1 }
     // Test case: Khanh-Whitebox - GetBookingsByHotelId_SortByTotalAmountAsc_Success (6.4), SortByTotalAmountDesc_Success (6.9), SortByNumberOfGuest_Success (6.10)
-    switch (sortBy) {
+    switch (sortBy?.trim()) {
       case 'totalAmountAsc':
         sort = { totalAmount: 1 }
         break
@@ -208,6 +208,8 @@ module.exports.getBookingsByHotelId = async (req, res) => {
       .sort(sort)
       .skip((page - 1) * itemsPerPage)
       .limit(Number(itemsPerPage))
+
+    console.log('Bookings:', bookings.length)
     // Test case: Khanh-Whitebox - GetBookingsByHotelId_EmptyForInvalidHotelId_Success (6.6)
     const totalItems = await Booking.countDocuments(query)
     const totalPages = Math.ceil(totalItems / itemsPerPage)
