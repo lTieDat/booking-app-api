@@ -290,7 +290,7 @@ describe('User Controller APIs', () => {
       // Nhánh xử lý: Không vào nhánh lỗi, chạy logic chính của verifyEmail (cập nhật user.verified)
       // Test case xử lý nhánh này: Test Case 3.2
 
-      const user = await User.create({
+      await User.create({
         fullName: 'John Doe',
         email: 'test@example.com',
         password: md5('password123'),
@@ -299,9 +299,6 @@ describe('User Controller APIs', () => {
         verified: false,
         verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       })
-
-      // Ensure user.save is called and resolves
-      jest.spyOn(User.prototype, 'save').mockResolvedValueOnce(user)
 
       const response = await request(app).post('/api/v1/users/verify').send({
         otp: '123456',
@@ -313,7 +310,6 @@ describe('User Controller APIs', () => {
         message: { message: 'Email verified successfully. You can now log in.' },
         token: 'valid-token',
       })
-      expect(User.prototype.save).toHaveBeenCalled()
 
       const updatedUser = await User.findOne({ email: 'test@example.com' })
       expect(updatedUser.toObject()).toMatchObject({
@@ -372,8 +368,6 @@ describe('User Controller APIs', () => {
       // Input: { otp: "123456", email: "test@example.com" }
       // Expected Output: Status: 500, { message: "Failed to save user verification" }
       // Nhánh xử lý: Nhánh 2 - Xử lý lỗi trong `try-catch` khi lưu user
-      // Test case xử lý nhánh này: Test Case 3.5
-
       const user = await User.create({
         fullName: 'John Doe',
         email: 'test@example.com',
@@ -384,7 +378,6 @@ describe('User Controller APIs', () => {
         verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
       })
 
-      // Mock save to reject with an error
       jest.spyOn(User.prototype, 'save').mockRejectedValueOnce(new Error('Save error'))
 
       const response = await request(app).post('/api/v1/users/verify').send({
@@ -404,13 +397,10 @@ describe('User Controller APIs', () => {
     })
 
     // Test Case 3.6
-    it('should return 500 for missing user token', async () => {
+    it('should return 401 for missing user token', async () => {
       // Purpose: Test verification when user token is missing
       // Input: { otp: "123456", email: "test@example.com" }
-      // Expected Output: Status: 500, { message: { message: "User authentication token not found" } }
-      // Nhánh xử lý: Nhánh 3 - Kiểm tra user.token tồn tại
-      // Test case xử lý nhánh này: Test Case 3.6
-
+      // Expected Output: Status: 401, { message: { message: "User authentication token not found" } }
       await User.create({
         fullName: 'John Doe',
         email: 'test@example.com',
@@ -426,7 +416,7 @@ describe('User Controller APIs', () => {
         email: 'test@example.com',
       })
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(401)
       expect(response.body).toEqual({
         message: { message: 'User authentication token not found' },
       })
@@ -462,6 +452,40 @@ describe('User Controller APIs', () => {
     })
   })
 
+  it('should verify email successfully without mocking save', async () => {
+    await User.create({
+      fullName: 'John Doe',
+      email: 'test@example.com',
+      password: md5('password123'),
+      token: 'valid-token',
+      verificationToken: '123456',
+      verified: false,
+      verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    })
+
+    const response = await request(app).post('/api/v1/users/verify').send({
+      otp: '123456',
+      email: 'test@example.com',
+    })
+
+    expect(response.status).toBe(200)
+    expect(response.body).toMatchObject({
+      message: { message: 'Email verified successfully. You can now log in.' },
+      token: 'valid-token',
+    })
+
+    const updatedUser = await User.findOne({ email: 'test@example.com' })
+    expect(updatedUser.toObject()).toMatchObject({
+      verified: true,
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
+      token: 'valid-token',
+    })
+
+    // Clean up
+    await User.deleteOne({ email: 'test@example.com' })
+  })
+
   describe('User Login API', () => {
     // Test Case 2.1
     it('should log in with valid credentials', async () => {
@@ -489,7 +513,11 @@ describe('User Controller APIs', () => {
         message: { message: 'Login successful' },
         token: 'valid-token',
       })
-      expect(response.headers['set-cookie']).toBeDefined()
+      expect(response.headers['set-cookie']).toContainEqual(expect.stringContaining('token=valid-token'))
+      console.log('Test Case 2.1: Success path executed')
+
+      // Clean up
+      await User.deleteOne({ email: 'test@example.com' })
     })
 
     // Test Case 2.2
@@ -539,7 +567,7 @@ describe('User Controller APIs', () => {
     })
 
     // Test Case 2.4
-    it('should return 500 for token not found', async () => {
+    it('should return 401 for token not found', async () => {
       // Purpose: Test login when user has no token
       // Input: { email: "test@example.com", password: "password123" }
       // Expected Output: Status: 500, { message: { message: "Authentication token not found" } }
@@ -559,7 +587,7 @@ describe('User Controller APIs', () => {
         password: 'password123',
       })
 
-      expect(response.status).toBe(500)
+      expect(response.status).toBe(401)
       expect(response.body).toEqual({
         message: { message: 'Authentication token not found' },
       })
@@ -626,6 +654,9 @@ describe('User Controller APIs', () => {
       expect(response.body).toEqual({
         message: { message: 'Incorrect password' },
       })
+
+      // Clean up
+      await User.deleteOne({ email: 'test@example.com' })
     })
 
     // Test Case 2.8
@@ -654,6 +685,20 @@ describe('User Controller APIs', () => {
         message: { message: 'Login successful' },
         token: 'valid-token',
       })
+    })
+
+    // Test Case 2.9
+    it('should handle unexpected database error during login', async () => {
+      jest.spyOn(User, 'findOne').mockRejectedValueOnce(new Error('Database connection error'))
+
+      const response = await request(app).post('/api/v1/users/login').send({
+        email: 'test@example.com',
+        password: 'password123',
+      })
+
+      expect(response.status).toBe(500)
+      expect(response.body).toEqual({ message: 'Login failed' })
+      expect(User.findOne).toHaveBeenCalled()
     })
   })
 

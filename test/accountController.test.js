@@ -16,14 +16,15 @@ afterAll(async () => {
 // Checking Admin Login (account.controller.adminLogin() function)
 describe('Admin Login API', () => {
   beforeEach(async () => {
-    // await Account.deleteMany()
-
     await Account.create({
       email: 'admin@example.com',
       password: md5('AdminPass123'),
       role: 'admin',
       token: 'secureadmintoken123',
     })
+  })
+  afterEach(async () => {
+    await Account.delete({ email: 'admin@example.com' })
   })
 
   // Test case AL1.1 - Email not found
@@ -100,6 +101,10 @@ describe('Get Admin Account Details API', () => {
     })
   })
 
+  afterEach(async () => {
+    await Account.delete({ email: 'admin@example.com' })
+  })
+
   // Test case AM2.1 - Token not associated with any account
   it('should return 401 if token is invalid (account not found)', async () => {
     const response = await request(app).get('/api/v1/admin/me').query({
@@ -158,6 +163,10 @@ describe('Update Admin Account API', () => {
     })
 
     existingAccountId = createdAccount._id.toString()
+  })
+
+  afterEach(async () => {
+    await Account.delete({ email: 'admin@update.com' })
   })
 
   // Test case UA3.1 - Account to be updated does not exist
@@ -232,6 +241,10 @@ describe('Delete Admin Account API', () => {
     existingAccountId = account._id.toString()
   })
 
+  afterEach(async () => {
+    await Account.delete({ email: 'delete@example.com' })
+  })
+
   // DA4.1 - Account to be deleted does not exist
   it('should return 401 if account to delete does not exist', async () => {
     const fakeId = new mongoose.Types.ObjectId()
@@ -294,6 +307,10 @@ describe('Get All Accounts API', () => {
     ])
   })
 
+  afterEach(async () => {
+    await Account.delete({ email: 'admin1@example.com' })
+    await Account.delete({ email: 'admin2@example.com' })
+  })
   // Test case GA5.1 - Successfully fetch all accounts
   it('should return all accounts successfully', async () => {
     const response = await request(app).get('/api/v1/admin/superAdmin/accounts')
@@ -405,6 +422,7 @@ describe('Add a new review or update an existing review API', () => {
 
   afterEach(async () => {
     await Review.deleteMany({ hotelId, userId, bookingId })
+    await Hotel.deleteMany({ HotelId: hotelId })
   })
 
   // AR7.1 - Hotel not found
@@ -445,6 +463,9 @@ describe('Add a new review or update an existing review API', () => {
     expect(reviewInDb.reviewText).toBe('Great place!')
     expect(reviewInDb.rating).toBe(5)
     expect(reviewInDb.bookingId).toBe(bookingId)
+
+    //Delete the review
+    await Review.deleteMany({ hotelId, userId, bookingId })
   })
 
   // AR7.3 - Add a new review
@@ -530,6 +551,10 @@ describe('Fetch all reviews API', () => {
         bookingId: 'b2',
       },
     ])
+  })
+
+  afterEach(async () => {
+    await Review.deleteMany({ hotelId })
   })
 
   // GR8.1 - Successfully get reviews

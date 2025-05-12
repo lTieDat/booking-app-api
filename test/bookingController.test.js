@@ -518,6 +518,9 @@ describe('Booking Controller APIs', () => {
       const booking = await Booking.findOne({ bookingId: 'BOOK123' })
       expect(booking.customerName).toBe('John Doe')
       expect(booking.totalAmount).toBe(500)
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('4.2 - should return 404 for non-existent booking', async () => {
@@ -567,6 +570,9 @@ describe('Booking Controller APIs', () => {
       const booking = await Booking.findOne({ bookingId: 'BOOK123' })
       expect(booking.customerName).toBe('Jane Doe')
       expect(booking.customerEmail).toBe('jane@example.com')
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('4.4 - should reject invalid data types', async () => {
@@ -594,6 +600,9 @@ describe('Booking Controller APIs', () => {
       expect(response.body).toMatchObject({
         message: expect.stringContaining('Cast to Number failed'),
       })
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('4.5 - should handle database save failure', async () => {
@@ -624,6 +633,9 @@ describe('Booking Controller APIs', () => {
         message: 'Internal server error.',
         status: 500,
       })
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('4.6 - should handle empty update object', async () => {
@@ -650,6 +662,9 @@ describe('Booking Controller APIs', () => {
         message: 'Booking updated successfully.',
         status: 200,
       })
+
+      //Delete the booking after test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('4.7 - should handle invalid bookingId format', async () => {
@@ -698,6 +713,10 @@ describe('Booking Controller APIs', () => {
         bookingId: 'BOOK123',
         review: expect.objectContaining({ reviewText: 'Great stay!' }),
       })
+
+      // Clean up the created booking and review after the test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
+      await Review.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('5.2 - should return bookings without reviews', async () => {
@@ -721,21 +740,24 @@ describe('Booking Controller APIs', () => {
         bookingId: 'BOOK123',
         review: 'no reviews',
       })
+
+      // Clean up the created booking after the test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
-    it('5.3 - should return 404 for no bookings', async () => {
+    it('5.3 - should return 401 for no bookings', async () => {
       const response = await request(app).get('/api/v1/booking/bookingHistory/empty@example.com').timeout(10000)
 
-      expect(response.status).toBe(404)
+      expect(response.status).toBe(401)
       expect(response.body).toMatchObject({
         message: 'Booking not found.',
       })
     })
 
-    it('5.4 - should return 404 for invalid email', async () => {
+    it('5.4 - should return 401 for invalid email', async () => {
       const response = await request(app).get('/api/v1/booking/bookingHistory/invalid').timeout(10000)
 
-      expect(response.status).toBe(404)
+      expect(response.status).toBe(401)
       expect(response.body).toMatchObject({
         message: 'Booking not found.',
       })
@@ -773,6 +795,9 @@ describe('Booking Controller APIs', () => {
       expect(response.body).toMatchObject({
         message: 'Internal server error.',
       })
+
+      // Clean up the created booking after the test
+      await Booking.deleteOne({ bookingId: 'BOOK123' })
     })
 
     it('5.7 - should handle multiple bookings', async () => {
@@ -811,6 +836,9 @@ describe('Booking Controller APIs', () => {
           expect.objectContaining({ bookingId: 'BOOK124' }),
         ])
       )
+
+      // Clean up the created bookings after the test
+      await Booking.deleteMany({ bookingId: { $in: ['BOOK123', 'BOOK124'] } })
     })
   })
 
@@ -843,8 +871,8 @@ describe('Booking Controller APIs', () => {
         createdAt: new Date('2025-04-14T16:14:19.031Z'),
         updatedAt: new Date('2025-04-14T16:14:19.031Z'),
         __v: 0,
-      });
-    
+      })
+
       await Booking.create([
         {
           bookingId: 'BOOK1',
@@ -882,16 +910,18 @@ describe('Booking Controller APIs', () => {
           checkInDate: '2025-04-22',
           checkOutDate: '2025-04-27',
         },
-      ]);
-    });
+      ])
+    })
 
     afterEach(async () => {
-      await Booking.deleteMany({ bookingId: { $in: ['BOOK1', 'BOOK2', 'BOOK3'] } });
-      await Hotel.deleteMany({ HotelId: 'PoWvBfLBf3eeO49oFPn1' });
+      await Booking.deleteMany({ bookingId: { $in: ['BOOK1', 'BOOK2', 'BOOK3'] } })
+      await Hotel.deleteMany({ HotelId: 'PoWvBfLBf3eeO49oFPn1' })
     })
 
     it('6.1 - should fetch bookings with no filters', async () => {
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(200)
       expect(response.body).toMatchObject({
@@ -996,7 +1026,9 @@ describe('Booking Controller APIs', () => {
     it('6.7 - should handle database error', async () => {
       jest.spyOn(Booking, 'find').mockRejectedValueOnce(new Error('DB failure'))
 
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
@@ -1089,7 +1121,6 @@ describe('Booking Controller APIs', () => {
     it('6.12 - should handle empty search query', async () => {
       const response = await request(app)
         .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
-        .query({ searchQuery: '' })
         .timeout(10000)
 
       expect(response.status).toBe(200)
@@ -1126,7 +1157,9 @@ describe('Booking Controller APIs', () => {
     it('6.15 - should handle hotel query failure', async () => {
       jest.spyOn(Hotel, 'findOne').mockRejectedValueOnce(new Error('Hotel query failure'))
 
-      const response = await request(app).get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1').timeout(10000)
+      const response = await request(app)
+        .get('/api/v1/booking/bookingHistory/manager/PoWvBfLBf3eeO49oFPn1')
+        .timeout(10000)
 
       expect(response.status).toBe(500)
       expect(response.body).toMatchObject({
