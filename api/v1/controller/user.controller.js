@@ -157,7 +157,7 @@ module.exports.login = async (req, res) => {
 
     // Check if the account is verified
     // Test case : DatLT -  UserLogin_NotVerified_Fail (UL2.3)
-    if (!user.isVerified) {
+    if (!user.verified) {
       return handleResponse(res, 403, 'Account not verified')
     }
 
