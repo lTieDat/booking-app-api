@@ -100,15 +100,17 @@ module.exports.getBooking = async (req, res) => {
 
 // [POST] /booking/:bookingId/update
 module.exports.updateBooking = async (req, res) => {
+  console.log('Update booking request:', req.body)
   try {
     // Test case: Khanh-Whitebox - UpdateBooking_NonExistentBooking_Fail (4.2), UpdateBooking_InvalidBookingIdFormat_Fail (4.7)
     const booking = await Booking.findOne({ bookingId: req.params.bookingId })
+    console.log('Booking updated:', booking)
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found.', status: 404 })
     }
     const {
-      fullName,
-      email,
+      customerName,
+      customerEmail,
       phoneNo,
       country,
       notes,
@@ -120,8 +122,8 @@ module.exports.updateBooking = async (req, res) => {
       specialRequest,
     } = req.body
     // Test case: Khanh-Whitebox - UpdateBooking_PartialUpdate_Success (4.3), UpdateBooking_EmptyUpdateObject_Success (4.6)
-    booking.customerName = fullName || booking.customerName
-    booking.customerEmail = email || booking.customerEmail
+    booking.customerName = customerName || booking.customerName
+    booking.customerEmail = customerEmail || booking.customerEmail
     booking.customerPhone = phoneNo || booking.customerPhone
     booking.customerCountry = country || booking.customerCountry
     booking.notes = notes || booking.notes
@@ -146,6 +148,7 @@ module.exports.updateBooking = async (req, res) => {
 module.exports.getBookingsByEmail = async (req, res) => {
   try {
     // Test case: Khanh-Whitebox - GetBookingsByEmail_MultipleBookings_Success (5.7), GetBookingsByEmail_InvalidEmail_Fail (5.4)
+    console.log('Email:', req.params.email)
     const bookings = await Booking.find({ customerEmail: req.params.email })
     // Test case: Khanh-Whitebox - GetBookingsByEmail_NoBookings_Fail (5.3)
     if (!bookings.length) {
