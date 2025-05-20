@@ -107,7 +107,7 @@ module.exports.verifyEmail = async (req, res) => {
       verificationTokenExpiresAt: { $gt: new Date() },
     })
     if (!user) {
-      return handleResponse(res, 400, 'Invalid or expired token')
+      return handleResponse(res, 404, 'Invalid or expired token')
     }
 
     // Ensure token exists
@@ -164,13 +164,13 @@ module.exports.login = async (req, res) => {
     // Check password
     // Test case : DatLT -  UserLogin_IncorrectPassword_Fail (UL2.7)
     if (user.password !== md5(password)) {
-      return handleResponse(res, 403, 'Incorrect password')
+      return handleResponse(res, 401, 'Incorrect password')
     }
 
     // Ensure token exists in the user model
     // Test case : DatLT -  UserLogin_TokenNotFound_Error (UL2.4)
     if (!user.token) {
-      return handleResponse(res, 500, 'Authentication token not found')
+      return handleResponse(res, 401, 'Authentication token not found')
     }
 
     // Set token in HTTP-only cookie
@@ -198,7 +198,7 @@ module.exports.forgotPassword = async (req, res) => {
     // Test case : DatLT -  ForgotPassword_EmailNotFound_Fail (FP4.2)
     const user = await User.findOne({ email, deleted: false })
     if (!user) {
-      return handleResponse(res, 400, 'Email not found')
+      return handleResponse(res, 404, 'Email not found')
     }
 
     // Generate OTP and save to database
@@ -232,7 +232,7 @@ module.exports.reset = async (req, res) => {
     // Test case : DatLT -  ResetPassword_UserNotFound_Fail (RS5.1)
     const user = await User.findOne({ email, deleted: false })
     if (!user) {
-      return handleResponse(res, 400, 'Invalid user')
+      return handleResponse(res, 404, 'Invalid user')
     }
     // Test case : DatLT -  ResetPassword_SamePassword_Fail (RS5.2)
     if (user.password === md5(newpassword)) {
@@ -264,7 +264,7 @@ module.exports.list = async (req, res) => {
 module.exports.prefix = async (req, res) => {
   try {
     const prefix = await Prefix.find()
-    // Test case : DatLT -  PhonePrefix_Success_Success (PF6.1), PhonePrefix_EmptyList_Success (PF6.3)
+    // Test case : DatLT -  PhonePrefix_Success_Success (PF6.1)
     return handleResponse(res, 200, 'Prefix list', { data: prefix })
   } catch (error) {
     // Test case : DatLT -  PhonePrefix_DBError_Error (PF6.2)

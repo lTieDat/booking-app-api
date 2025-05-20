@@ -10,38 +10,76 @@ const Room = require('../../../models/room.model')
 const Post = require('../../../models/post.model')
 const Setting = require('../../../models/setting.model')
 
-//[GET] /api/v1/admin/DashboardData/:adminId
+// [GET] /api/v1/admin/DashboardData/:adminId
 module.exports.getDashboardData = async (req, res) => {
   try {
+    // Extract admin token from request parameters
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId
+    // Test case: 7.2 - Handle invalid adminId (manager not found)
+    // Test case: 7.3 - Handle database query failure for Account
+    // Test case: 7.4 - Handle empty hotel list
+    // Test case: 7.5 - Handle database query failure for Room
+    // Test case: 7.6 - Handle database query failure for Hotel
+    // Test case: 7.7 - Handle database query failure for Booking
+    // Test case: 7.8 - Handle no bookings for hotels
     const token = req.params.adminId
-    const manager = await Account.findOne({ token })
-    console.log('Manager:', manager)
-    console.log('Token:', token)
 
+    // Find the manager account associated with the token
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (valid token returns manager)
+    // Test case: 7.2 - Handle invalid adminId (manager not found, returns null)
+    // Test case: 7.3 - Handle database query failure for Account (throws error)
+    // Test case: 7.4 - Handle empty hotel list (valid token but empty hotel_id)
+    const manager = await Account.findOne({ token })
+
+    // Check if manager exists
+    // Test case: 7.2 - Handle invalid adminId (manager not found)
     if (!manager) {
       return res.status(404).json({ error: 'Manager not found' })
     }
 
+    // Get the list of hotel IDs associated with the manager
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (uses hotel_id)
+    // Test case: 7.4 - Handle empty hotel list (hotel_id is empty)
     const hotelIds = manager.hotel_id
+
+    // Fetch all rooms for the manager's hotels
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (returns room data)
+    // Test case: 7.4 - Handle empty hotel list (returns empty array)
+    // Test case: 7.5 - Handle database query failure for Room (throws error)
+    // Test case: 7.8 - Handle no bookings for hotels (returns room data)
     const rooms = await Room.find({
       HotelId: { $in: hotelIds },
     })
 
+    // Fetch all hotels for the manager
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (returns hotel data)
+    // Test case: 7.4 - Handle empty hotel list (returns empty array)
+    // Test case: 7.6 - Handle database query failure for Hotel (throws error)
+    // Test case: 7.8 - Handle no bookings for hotels (returns hotel data)
     const hotels = await Hotel.find({
       HotelId: { $in: hotelIds },
     })
 
+    // Fetch all bookings for the manager's hotels
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (returns booking data)
+    // Test case: 7.4 - Handle empty hotel list (returns empty array)
+    // Test case: 7.7 - Handle database query failure for Booking (throws error)
+    // Test case: 7.8 - Handle no bookings for hotels (returns empty array)
     const bookings = await Booking.find({
       hotelId: { $in: hotelIds },
     })
 
+    // Filter bookings by status
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (filters bookings by status)
+    // Test case: 7.8 - Handle no bookings for hotels (returns empty arrays for all statuses)
     const pendingBookings = bookings.filter((booking) => booking.status === 'pending')
-
     const paidBookings = bookings.filter((booking) => booking.status === 'paid')
-
     const confirmedBookings = bookings.filter((booking) => booking.status === 'confirmed')
 
     // Calculate total revenue for each hotel
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (calculates revenue)
+    // Test case: 7.4 - Handle empty hotel list (returns empty revenue array)
+    // Test case: 7.8 - Handle no bookings for hotels (returns zero revenue)
     const totalRevenue = hotels.map((hotel) => {
       const hotelBookings = bookings.filter((booking) => booking.hotelId === hotel.HotelId)
       return {
@@ -50,13 +88,20 @@ module.exports.getDashboardData = async (req, res) => {
       }
     })
 
-    //get free rooms, booked rooms, and total rooms for each hotel
+    // Calculate room data (total, booked, and free rooms) for each hotel
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (calculates room data)
+    // Test case: 7.4 - Handle empty hotel list (returns empty room data array)
+    // Test case: 7.8 - Handle no bookings for hotels (calculates room data based on rooms)
     const hotelRoomData = hotels.map((hotel) => {
       const hotelRooms = rooms.filter((room) => room.HotelId == hotel.HotelId)
 
+      // Sum the maximum quantity of rooms for the hotel
       const totalRooms = hotelRooms.reduce((sum, room) => sum + room.MaxQuantity, 0)
+      // Sum the number of available rooms
       const freeRooms = hotelRooms.reduce((sum, room) => sum + room.NumberAvailable, 0)
+      // Calculate booked rooms as the difference
       const bookedRooms = totalRooms - freeRooms
+
       return {
         hotelId: hotel.HotelName,
         totalRooms,
@@ -65,6 +110,10 @@ module.exports.getDashboardData = async (req, res) => {
       }
     })
 
+    // Send successful response with dashboard data
+    // Test case: 7.1 - Successfully fetch dashboard data with valid adminId (returns full data)
+    // Test case: 7.4 - Handle empty hotel list (returns zero/empty data)
+    // Test case: 7.8 - Handle no bookings for hotels (returns data with no bookings)
     res.json({
       message: 'Dashboard data fetched successfully',
       status: 200,
@@ -79,6 +128,11 @@ module.exports.getDashboardData = async (req, res) => {
       },
     })
   } catch (error) {
+    // Log error and send error response
+    // Test case: 7.3 - Handle database query failure for Account (catches error)
+    // Test case: 7.5 - Handle database query failure for Room (catches error)
+    // Test case: 7.6 - Handle database query failure for Hotel (catches error)
+    // Test case: 7.7 - Handle database query failure for Booking (catches error)
     console.error('Error fetching dashboard data:', error)
     res.status(500).json({ error: 'An error occurred while fetching dashboard data' })
   }
@@ -86,19 +140,23 @@ module.exports.getDashboardData = async (req, res) => {
 
 //[POST] /admin/login
 module.exports.adminLogin = async (req, res) => {
-  try { // VuNA - accountController.test - AL1.4
+  try {
+    // VuNA - accountController.test - AL1.4
     const { email, password } = req.body
     const account = await Account.findOne({ email })
-    if (!account) { // VuNA - accountController.test - AL1.1
+    if (!account) {
+      // VuNA - accountController.test - AL1.1
       return res.json({ message: 'Email not found', status: 400 })
     }
     console.log(md5(password))
-    if (account.password !== md5(password)) { // VuNA - accountController.test - AL1.2
+    if (account.password !== md5(password)) {
+      // VuNA - accountController.test - AL1.2
       return res.json({ message: 'Incorrect password', status: 400 })
     }
     const token = account.token
 
-    res.json({ // VuNA - accountController.test - AL1.3
+    res.json({
+      // VuNA - accountController.test - AL1.3
       message: 'Login successful',
       status: 200,
       data: account,
@@ -110,11 +168,13 @@ module.exports.adminLogin = async (req, res) => {
 
 //[GET] /api/v1/admin/me
 module.exports.adminMe = async (req, res) => {
-  try { // VuNA - accountController.test - AM2.3
+  try {
+    // VuNA - accountController.test - AM2.3
     const token = req.query.tokenID
     const account = await Account.findOne({ token })
 
-    if (!account) { // VuNA - accountController.test - AM2.1
+    if (!account) {
+      // VuNA - accountController.test - AM2.1
       return res.json({ message: 'Account not found', status: 400 })
     }
     return res.json({ message: 'Account details', status: 200, data: account }) // VuNA - accountController.test - AM2.2
@@ -125,7 +185,8 @@ module.exports.adminMe = async (req, res) => {
 
 //[GET] /api/v1/admin/superAdmin/accounts
 module.exports.getAccounts = async (req, res) => {
-  try { // VuNA - accountController.test - GA5.2
+  try {
+    // VuNA - accountController.test - GA5.2
     const accounts = await Account.find()
     res.json({ message: 'Accounts fetched successfully', status: 200, data: accounts }) // VuNA - accountController.test - GA5.1
   } catch (error) {
@@ -135,7 +196,8 @@ module.exports.getAccounts = async (req, res) => {
 
 //[POST] /admin/superAdmin/account
 module.exports.createAccount = async (req, res) => {
-  try { // VuNA - accountController.test - CA6.2
+  try {
+    // VuNA - accountController.test - CA6.2
     const { email, password, role } = req.body
     const token = generateRandomString(20)
     const newAccount = new Account({
@@ -154,11 +216,13 @@ module.exports.createAccount = async (req, res) => {
 
 //[PUT] /api/v1/admin/superAdmin/account/:accountId
 module.exports.updateAccount = async (req, res) => {
-  try { // VuNA - accountController.test - UA3.3
+  try {
+    // VuNA - accountController.test - UA3.3
     const accountId = req.params.accountId
     const { email, password, role } = req.body
     const account = await Account.findById(accountId)
-    if (!account) { // VuNA - accountController.test - UA3.1
+    if (!account) {
+      // VuNA - accountController.test - UA3.1
       return res.json({ message: 'Account not found', status: 400 })
     }
     account.email = email
@@ -173,10 +237,12 @@ module.exports.updateAccount = async (req, res) => {
 
 //[DELETE] /api/v1/admin/superAdmin/account/:accountId
 module.exports.deleteAccount = async (req, res) => {
-  try { // VuNA - accountController.test - DA4.3
+  try {
+    // VuNA - accountController.test - DA4.3
     const accountId = req.params.accountId
     const account = await Account.findById(accountId)
-    if (!account) { // VuNA - accountController.test - DA4.1
+    if (!account) {
+      // VuNA - accountController.test - DA4.1
       return res.json({ message: 'Account not found', status: 400 })
     }
     await account.deleteOne()
