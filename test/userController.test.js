@@ -450,40 +450,40 @@ describe('User Controller APIs', () => {
       const user = await User.findOne({ email: 'test@example.com' })
       expect(user).toBeNull()
     })
-  })
+    // Test Case 3.8
+    it('should verify email successfully without mocking save', async () => {
+      await User.create({
+        fullName: 'John Doe',
+        email: 'test@example.com',
+        password: md5('password123'),
+        token: 'valid-token',
+        verificationToken: '123456',
+        verified: false,
+        verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      })
 
-  it('should verify email successfully without mocking save', async () => {
-    await User.create({
-      fullName: 'John Doe',
-      email: 'test@example.com',
-      password: md5('password123'),
-      token: 'valid-token',
-      verificationToken: '123456',
-      verified: false,
-      verificationTokenExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+      const response = await request(app).post('/api/v1/users/verify').send({
+        otp: '123456',
+        email: 'test@example.com',
+      })
+
+      expect(response.status).toBe(200)
+      expect(response.body).toMatchObject({
+        message: { message: 'Email verified successfully. You can now log in.' },
+        token: 'valid-token',
+      })
+
+      const updatedUser = await User.findOne({ email: 'test@example.com' })
+      expect(updatedUser.toObject()).toMatchObject({
+        verified: true,
+        verificationToken: null,
+        verificationTokenExpiresAt: null,
+        token: 'valid-token',
+      })
+
+      // Clean up
+      await User.deleteOne({ email: 'test@example.com' })
     })
-
-    const response = await request(app).post('/api/v1/users/verify').send({
-      otp: '123456',
-      email: 'test@example.com',
-    })
-
-    expect(response.status).toBe(200)
-    expect(response.body).toMatchObject({
-      message: { message: 'Email verified successfully. You can now log in.' },
-      token: 'valid-token',
-    })
-
-    const updatedUser = await User.findOne({ email: 'test@example.com' })
-    expect(updatedUser.toObject()).toMatchObject({
-      verified: true,
-      verificationToken: null,
-      verificationTokenExpiresAt: null,
-      token: 'valid-token',
-    })
-
-    // Clean up
-    await User.deleteOne({ email: 'test@example.com' })
   })
 
   describe('User Login API', () => {

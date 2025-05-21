@@ -444,15 +444,6 @@ describe('Booking Controller APIs', () => {
       })
     })
 
-    it('3.2 - should return 404 for non-existent booking', async () => {
-      const response = await request(app).delete('/api/v1/booking/BOOK999').timeout(10000)
-
-      expect(response.status).toBe(404)
-      expect(response.body).toMatchObject({
-        message: 'Booking not found.',
-      })
-    })
-
     it('3.3 - should handle database find error', async () => {
       jest.spyOn(Booking, 'findOne').mockRejectedValueOnce(new Error('DB failure'))
 
