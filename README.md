@@ -65,7 +65,7 @@ http://localhost:5000/api
 - `POST /reviews` – Add a review
 - `GET /reviews/room/:roomId` – Get reviews for a room
 
-> Full API docs can be generated via Swagger or Postman (coming soon).
+> Full API docs can be view in localhost port 8002 when running server
 
 ---
 
